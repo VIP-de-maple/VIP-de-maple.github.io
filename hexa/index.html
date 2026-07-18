@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEXAステータス 効率計算機</title>
+<style>
+  :root{
+    --bg:#14101f;            /* 深夜のエルダ */
+    --panel:#1d1830;         /* パネル */
+    --panel2:#241d3a;
+    --line:#332a4d;          /* 罫線 */
+    --cyan:#59e3d8;          /* ソルエルダ・シアン */
+    --cyan-dim:rgba(89,227,216,.14);
+    --gold:#f2c14e;          /* コアゴールド（最適ハイライト） */
+    --gold-dim:rgba(242,193,78,.14);
+    --txt:#e8e4f5;
+    --muted:#9a92b5;
+    --warn:#ff8585;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;
+    --jp:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{color-scheme:dark}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(1000px 500px at 85% -10%, rgba(89,227,216,.06), transparent 60%),
+      radial-gradient(800px 420px at 0% 110%, rgba(140,90,220,.08), transparent 60%);
+    color:var(--txt);
+    font-family:var(--jp);
+    font-size:14px;
+    line-height:1.65;
+    padding:28px 20px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---------- ヘッダー ---------- */
+  header{margin-bottom:26px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .hexmark{width:52px;height:58px;flex:none}
+  h1{font-size:22px;font-weight:800;letter-spacing:.06em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .eyebrow{display:flex;align-items:center;gap:8px;font-size:11.5px;letter-spacing:.22em;color:var(--cyan);font-weight:700;margin-bottom:10px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .hexglyph{width:11px;height:12px;flex:none}
+
+  /* ---------- レイアウト ---------- */
+  .grid{display:grid;grid-template-columns:390px 1fr;gap:18px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px}
+  section.block{margin-top:26px}
+
+  /* ---------- 入力 ---------- */
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+  .field input,select{
+    width:100%;background:#120e1d;border:1px solid var(--line);color:var(--txt);
+    border-radius:7px;padding:7px 9px;font-size:13.5px;font-family:var(--mono);
+  }
+  select{font-family:var(--jp)}
+  .field input:focus,select:focus{outline:2px solid var(--cyan);outline-offset:0;border-color:transparent}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .hint{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5}
+
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px}
+  .seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:8px 0;font-size:13px;font-family:var(--jp);cursor:pointer;font-weight:700}
+  .seg button.on{background:var(--cyan-dim);color:var(--cyan)}
+  .seg button:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
+
+  /* ---------- コアカード ---------- */
+  .core{border:1px solid var(--line);border-radius:10px;padding:13px 14px;margin-bottom:12px;background:var(--panel2)}
+  .core.off{opacity:.45}
+  .corehead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .corehead b{font-size:13.5px;letter-spacing:.04em}
+  .corehead .cond{font-size:11px;color:var(--muted);margin-left:auto}
+  .slotrow{display:grid;grid-template-columns:56px 1fr 84px;gap:8px;align-items:center;margin-bottom:7px}
+  .slotrow .tag{font-size:11.5px;color:var(--muted)}
+  .slotrow .tag.main{color:var(--gold)}
+  .lvbox{display:flex;align-items:center;gap:5px}
+  .lvbox input{width:52px;text-align:center}
+  .lvbox span{font-size:11px;color:var(--muted)}
+  .coretotal{font-size:11.5px;color:var(--muted);text-align:right}
+  .coretotal b{font-family:var(--mono)}
+  input[type=checkbox]{accent-color:var(--cyan);width:15px;height:15px}
+
+  /* ---------- 結果 ---------- */
+  .resultgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .optcore{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;position:relative}
+  .optcore h4{font-size:12.5px;color:var(--muted);letter-spacing:.08em;margin-bottom:8px}
+  .optline{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,.06);gap:8px}
+  .optline:last-child{border-bottom:0}
+  .optline .nm{font-size:13px}
+  .optline .nm .role{font-size:10.5px;color:var(--gold);letter-spacing:.1em;margin-right:6px}
+  .optline .nm .role.add{color:var(--cyan)}
+  .optline .val{font-family:var(--mono);font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .bigfd{display:flex;flex-wrap:wrap;gap:14px;margin:4px 0 16px;align-items:stretch}
+  .fdcard{flex:1;min-width:210px;background:linear-gradient(180deg,var(--gold-dim),transparent);border:1px solid rgba(242,193,78,.35);border-radius:10px;padding:12px 16px}
+  .fdcard.base{background:linear-gradient(180deg,var(--cyan-dim),transparent);border-color:rgba(89,227,216,.3)}
+  .fdcard .lab{font-size:11.5px;color:var(--muted);letter-spacing:.08em}
+  .fdcard .num{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--gold);line-height:1.25}
+  .fdcard.base .num{color:var(--cyan)}
+  .fdcard .note{font-size:11px;color:var(--muted)}
+  .sumline{font-size:12px;color:var(--muted);margin-top:10px}
+  .sumline code{font-family:var(--mono);color:var(--txt)}
+
+  /* ---------- テーブル ---------- */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:6px 9px;border-bottom:1px solid rgba(255,255,255,.06);text-align:right;font-family:var(--mono)}
+  th{color:var(--muted);font-family:var(--jp);font-weight:600;font-size:11.5px;letter-spacing:.04em}
+  td:first-child,th:first-child{text-align:left;font-family:var(--jp)}
+  td.pick{color:var(--gold);font-weight:700;position:relative}
+  td.pick::before{content:"⬢ ";font-size:9px}
+  td.zero{color:#5c5478}
+  .tablecard{overflow-x:auto}
+  .rank1 td:first-child{color:var(--cyan);font-weight:700}
+
+  /* ---------- 警告・詳細 ---------- */
+  .warn{background:rgba(255,133,133,.08);border:1px solid rgba(255,133,133,.35);border-radius:8px;padding:9px 12px;font-size:12.5px;color:var(--warn);margin-bottom:12px}
+  details{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-top:14px}
+  summary{cursor:pointer;padding:13px 16px;font-weight:700;font-size:13.5px;list-style:none;display:flex;align-items:center;gap:8px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"＋";margin-left:auto;color:var(--muted)}
+  details[open] summary::after{content:"−"}
+  details .inner{padding:0 16px 16px;color:var(--txt)}
+  details .inner p{margin:8px 0;font-size:13px}
+  details .inner table{margin:8px 0 14px}
+  .footnote{margin-top:26px;font-size:11.5px;color:var(--muted);line-height:1.7}
+  @media (prefers-reduced-motion:no-preference){
+    .fdcard .num{transition:color .2s}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <svg class="hexmark" viewBox="0 0 52 58" aria-hidden="true">
+    <polygon points="26,2 50,15 50,43 26,56 2,43 2,15" fill="none" stroke="#59e3d8" stroke-width="2.5"/>
+    <polygon points="26,14 40,22 40,36 26,44 12,36 12,22" fill="rgba(89,227,216,.12)" stroke="#f2c14e" stroke-width="1.5"/>
+  </svg>
+  <div>
+    <h1>HEXAステータス 効率計算機</h1>
+    <div class="sub">キャラクターのステータスと各コアのLvを入力すると、火力上昇率（最終ダメージ換算）が最大になる組み合わせを全探索で求めます。</div>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- ========== ① キャラクターステータス ========== -->
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>キャラクターステータス</div>
+
+    <div class="seg" role="group" aria-label="想定コンテンツ">
+      <button id="modeBoss" class="on">ボス基準</button>
+      <button id="modeHunt">狩り基準</button>
+    </div>
+
+    <div class="field">
+      <label for="cls">職業タイプ</label>
+      <select id="cls">
+        <option value="normal">通常（メイン＋サブステータス）</option>
+        <option value="xenon">キセノン（STR+DEX+LUK）</option>
+        <option value="da">デーモンアベンジャー（MaxHP）</option>
+      </select>
+    </div>
+
+    <div id="statNormal">
+      <div class="row2">
+        <div class="field"><label for="mainStat">メインステータス（表示値）</label><input id="mainStat" type="number" value="120000" min="1"></div>
+        <div class="field"><label for="subStat">サブステータス（表示値）</label><input id="subStat" type="number" value="6000" min="0"></div>
+      </div>
+      <div class="hint" style="margin:-6px 0 10px">いずれもステータス画面の表示値。サブステータスが2種ある職（カデナ等）は表示値を合算して入力。</div>
+    </div>
+    <div id="statXenon" style="display:none">
+      <div class="field"><label for="xenonSum">STR+DEX+LUK の合計（表示値）</label><input id="xenonSum" type="number" value="150000" min="1"></div>
+    </div>
+    <div id="statDA" style="display:none">
+      <div class="field"><label for="daHP">MaxHP（表示値）</label><input id="daHP" type="number" value="1500000" min="1"></div>
+    </div>
+
+    <div class="row2">
+      <div class="field"><label for="att">攻撃力／魔力（表示値）</label><input id="att" type="number" value="4000" min="1"></div>
+      <div class="field"><label for="attPct">攻撃力／魔力 ％の合計</label><input id="attPct" type="number" value="100" min="0"></div>
+    </div>
+    <div class="hint" style="margin:-6px 0 10px">ヘキサの攻撃力/魔力には％が乗るため、潜在等の攻撃力％合計を入力（不明なら0でも可・その場合ATTがやや過小評価）。</div>
+
+    <div class="row2">
+      <div class="field"><label for="dmg">ダメージ（%）</label><input id="dmg" type="number" value="120" min="0"></div>
+      <div class="field"><label for="boss">ボスダメージ（%）</label><input id="boss" type="number" value="380" min="0"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="cd">クリティカルダメージ（%・表示値）</label><input id="cd" type="number" value="90" min="0"></div>
+      <div class="field"><label for="cr">クリティカル率（%）</label><input id="cr" type="number" value="100" min="0" max="100"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="ied">防御率無視（%・合計）</label><input id="ied" type="number" value="94" min="0" max="100" step="0.1"></div>
+      <div class="field"><label for="pdr">敵の防御率（%）</label><input id="pdr" type="number" value="300" min="0"></div>
+    </div>
+    <div class="hint">クリダメは基本値35%込みの表示値。敵防御率は終盤ボス300%、狩りのグランディス通常モンスターは目安30%。</div>
+  </div>
+
+  <!-- ========== ② ステータスコア ========== -->
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>ステータスコア（現在の装着とLv）</div>
+    <div class="hint" style="margin-bottom:12px">
+      Lvは各コアの強化画面の値をそのまま入力。ステータス種類が装着済みなら選択してください（計算時に現在のヘキサ分を差し引いてから各構成を公平に比較します）。「未設定」の場合は、入力したキャラステにヘキサ分が含まれていないものとして扱います。
+    </div>
+    <div id="cores"></div>
+  </div>
+</div>
+
+<!-- ========== ③ 結果 ========== -->
+<section class="block">
+  <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>最適な組み合わせ</div>
+  <div id="warnBox"></div>
+  <div class="bigfd" id="fdCards"></div>
+  <div class="resultgrid" id="optCores"></div>
+  <div class="sumline" id="optSummary"></div>
+</section>
+
+<!-- ========== ④ スロット別効率表 ========== -->
+<section class="block">
+  <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>スロット別 火力上昇率（単体評価）</div>
+  <div class="hint" style="margin-bottom:10px">各ステータスをそのスロットに単独で置いた場合の火力上昇率。⬢ 印は最適構成で採用された枠。複数コアで同系統を重ねると逓減があるため、合計は最適構成の値と厳密には一致しません。</div>
+  <div class="resultgrid" id="slotTables"></div>
+</section>
+
+<!-- ========== ⑤ 仕様・参考データ ========== -->
+<details>
+  <summary><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#9a92b5"/></svg>仕様と参考データ（上昇値・確率・コスト）</summary>
+  <div class="inner">
+    <p><b>基本ルール</b> — 1コアにつきメイン1種＋付加2種を選択（コア内で重複不可）。コア全体では、同じステータスをメインに使えるのは1コアまで、付加に使えるのは合計2コアまで。種類の変更はいつでも1億メソ。コアはLv20まで強化でき、1回の強化で3種のうちどれか1つが+1（各ステータスの上限はLv10）。</p>
+    <p><b>上昇値（累計）</b> — Lv1〜4はメインと付加で同値。Lv5からメインの伸びが加速し、Lv10でちょうど付加の2倍になります。</p>
+    <div class="tablecard"><table id="valueTable"></table></div>
+    <p style="font-size:12px;color:var(--muted)">攻撃力/魔力は攻撃力％が乗る（％適用）。メインステータス（フラット）はステータス％が乗らない（％未適用）。キセノンはオールステータス、デーモンアベンジャーはMaxHPとして付与。防御率無視は他の防御率無視と乗算で合成。</p>
+    <p><b>強化確率とコスト</b> — メインステータスのLvが上がるほど、メインに当たる確率が下がり1回あたりの欠片コストが増えます（残りの確率は付加2種で等分）。</p>
+    <div class="tablecard"><table>
+      <tr><th>メインLv</th><th>メイン強化確率</th><th>欠片／回</th></tr>
+      <tr><td>0〜2</td><td>35%</td><td>10個</td></tr>
+      <tr><td>3〜6</td><td>20%</td><td>20個</td></tr>
+      <tr><td>7</td><td>15%</td><td>30個</td></tr>
+      <tr><td>8</td><td>10%</td><td>30個</td></tr>
+      <tr><td>9</td><td>5%</td><td>50個</td></tr>
+      <tr><td>10</td><td>0%（付加のみ上昇）</td><td>50個</td></tr>
+    </table></div>
+    <p><b>活性化と初期化</b> — コアⅠ: Lv260（ソルエルダ5＋欠片10）／コアⅡ: Lv265かつⅠをLv20（10＋200）／コアⅢ: Lv270かつⅡをLv20（15＋350）。初期化はコアLv10以上で可能、費用はⅠ1,000万・Ⅱ2,000万・Ⅲ3,500万メソ。将来的にコアはⅥまで追加予定。</p>
+    <p><b>厳選の目安</b> — メインはLv4まで付加と同値なので、メインが低くても付加が高ければ効率上は損ではありません。メインLv8以上を狙う場合のみ初期化厳選の価値が出ますが、欠片コストが大きいため通常はスキル強化を優先し「出た目をそのまま使う」のが定石とされています。</p>
+  </div>
+</details>
+
+<div class="footnote">
+  計算モデル：火力 ∝ 攻撃力 × ステータス項 × (1 + (ダメージ+ボスダメージ)/100) × (1 + クリ率×クリダメ) × (1 − 敵防御率×(1−防御率無視))。最終ダメージなど全構成に共通の係数は比較に影響しないため省略。狩り基準ではボスダメージを除外。数値はKMS/JMS/GMS共通の公式値（2026年時点）に基づきます。
+</div>
+
+</div>
+
+<script>
+"use strict";
+/* ================= 定数 ================= */
+// 累計値の倍率: 主要値 base × MULT[lv]
+const MAIN_MULT = [0,1,2,3,4,6,8,10,13,16,20];
+const ADD_MULT  = [0,1,2,3,4,5,6,7,8,9,10];
+const TYPES = [
+  {id:"att",  name:"攻撃力／魔力",       short:"攻/魔",   base:5,    kind:"att"},
+  {id:"boss", name:"ボスダメージ",       short:"ボスダメ", base:1,    kind:"boss"},
+  {id:"cd",   name:"クリティカルダメージ", short:"クリダメ", base:0.35, kind:"cd"},
+  {id:"dmg",  name:"ダメージ",           short:"ダメージ", base:0.75, kind:"dmg"},
+  {id:"ied",  name:"防御率無視",         short:"防御無視", base:1,    kind:"ied"},
+  {id:"flat", name:"メインステータス",     short:"メインステ", base:100, kind:"flat"},
+];
+const FLAT_BASE = {normal:100, xenon:48, da:2100}; // 1Lvあたりの基準値（キセノンはオールステ、DAはHP）
+const CORE_DEFS = [
+  {label:"コアⅠ", cond:"Lv260〜", defOn:true,  defLv:[5,8,7]},
+  {label:"コアⅡ", cond:"Lv265〜・Ⅰ完成後", defOn:true,  defLv:[4,8,8]},
+  {label:"コアⅢ", cond:"Lv270〜・Ⅱ完成後", defOn:false, defLv:[0,0,0]},
+];
+
+/* ================= 入力UI構築 ================= */
+const coresEl = document.getElementById("cores");
+CORE_DEFS.forEach((c,i)=>{
+  const div = document.createElement("div");
+  div.className = "core" + (c.defOn ? "" : " off");
+  div.id = "core"+i;
+  const typeOpts = ['<option value="">未設定</option>']
+    .concat(TYPES.map(t=>`<option value="${t.id}">${t.name}</option>`)).join("");
+  div.innerHTML = `
+    <div class="corehead">
+      <input type="checkbox" id="on${i}" ${c.defOn?"checked":""} aria-label="${c.label}を有効化">
+      <b>${c.label}</b><span class="cond">${c.cond}</span>
+    </div>
+    ${["メイン","付加 1","付加 2"].map((tag,s)=>`
+      <div class="slotrow">
+        <span class="tag ${s===0?"main":""}">${tag}</span>
+        <select id="t${i}${s}" aria-label="${c.label} ${tag} の種類">${typeOpts}</select>
+        <div class="lvbox"><input id="lv${i}${s}" type="number" min="0" max="10" value="${c.defLv[s]}"><span>Lv</span></div>
+      </div>`).join("")}
+    <div class="coretotal">コア合計 <b id="tot${i}">0</b> / 20</div>`;
+  coresEl.appendChild(div);
+});
+
+/* ================= 入力読み取り ================= */
+let mode = "boss";
+function readInputs(){
+  const num = id => { const v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : 0; };
+  const cls = document.getElementById("cls").value;
+  const inp = {
+    cls, mode,
+    att: Math.max(1,num("att")), attPct: Math.max(0,num("attPct")),
+    dmg: num("dmg"), boss: num("boss"),
+    cd: num("cd"), cr: Math.min(100,Math.max(0,num("cr"))),
+    ied: Math.min(100,Math.max(0,num("ied"))), pdr: Math.max(0,num("pdr")),
+    mainStat: Math.max(1,num("mainStat")), subStat: Math.max(0,num("subStat")),
+    xenonSum: Math.max(1,num("xenonSum")), daHP: Math.max(1,num("daHP")),
+    cores: []
+  };
+  CORE_DEFS.forEach((c,i)=>{
+    const on = document.getElementById("on"+i).checked;
+    const slots = [0,1,2].map(s=>({
+      type: document.getElementById(`t${i}${s}`).value || null,
+      lv: Math.min(10,Math.max(0, Math.round(num(`lv${i}${s}`)))),
+    }));
+    document.getElementById("tot"+i).textContent = slots.reduce((a,x)=>a+x.lv,0);
+    document.getElementById("core"+i).classList.toggle("off", !on);
+    inp.cores.push({on, slots, label:c.label});
+  });
+  return inp;
+}
+
+/* ================= ボーナス計算 ================= */
+// スロット1枠分のボーナス値（累計）
+function slotValue(typeId, lv, isMain, cls){
+  if(!typeId || lv<=0) return 0;
+  const t = TYPES.find(x=>x.id===typeId);
+  const mult = (isMain ? MAIN_MULT : ADD_MULT)[lv];
+  const base = t.kind==="flat" ? FLAT_BASE[cls] : t.base;
+  return base * mult;
+}
+// ボーナス集合（複数枠の合成）: {cd,boss,dmg,att,flat,iedKeep(=∏(1-v))}
+function emptyBonus(){ return {cd:0,boss:0,dmg:0,att:0,flat:0,iedKeep:1}; }
+function addSlot(b, typeId, lv, isMain, cls){
+  const v = slotValue(typeId, lv, isMain, cls);
+  if(v===0) return b;
+  const kind = TYPES.find(x=>x.id===typeId).kind;
+  if(kind==="ied") b.iedKeep *= (1 - v/100);
+  else b[kind] += v;
+  return b;
+}
+function bonusOfConfig(cfg, cores, cls){
+  // cfg: 配列 [ [m,a1,a2] | null(コア無効/対象外) ] — 各要素は TYPES の index か -1
+  const b = emptyBonus();
+  cfg.forEach((cc,i)=>{
+    if(!cc) return;
+    const lv = cores[i].slots.map(s=>s.lv);
+    if(cc[0]>=0) addSlot(b, TYPES[cc[0]].id, lv[0], true,  cls);
+    if(cc[1]>=0) addSlot(b, TYPES[cc[1]].id, lv[1], false, cls);
+    if(cc[2]>=0) addSlot(b, TYPES[cc[2]].id, lv[2], false, cls);
+  });
+  return b;
+}
+
+/* ================= 火力スコア ================= */
+// base: ヘキサ分を差し引いた基礎値。bonus を足した状態の火力スコア（比例値）を返す。
+function score(base, b, inp){
+  const attMul = 1 + inp.attPct/100;
+  const att = base.att + b.att * attMul;
+  let statRatioNum, statRatioDen;
+  if(inp.cls==="normal"){ statRatioNum = 4*(base.stat + b.flat) + base.sub; statRatioDen = 1; }
+  else if(inp.cls==="xenon"){ statRatioNum = base.stat + b.flat*3; statRatioDen = 1; } // オールステ→3ステ合計
+  else { statRatioNum = base.stat + b.flat; statRatioDen = 1; }
+  const dmgSum = base.dmg + b.dmg + (inp.mode==="boss" ? (base.boss + b.boss) : 0);
+  const D = 1 + dmgSum/100;
+  const C = 1 + (inp.cr/100) * ((base.cd + b.cd)/100);
+  const iedTotal = 1 - (1 - base.ied/100) * b.iedKeep;      // 乗算合成
+  const I = Math.max(1e-6, 1 - (inp.pdr/100) * (1 - iedTotal));
+  return {v: att * statRatioNum/statRatioDen * D * C * I, floored: (1 - (inp.pdr/100)*(1-iedTotal)) <= 0};
+}
+
+/* ================= 基礎値（現在ヘキサ分の差し引き） ================= */
+function computeBase(inp){
+  // 現在装着中（typeが設定されている枠）のボーナスを差し引く
+  const curCfg = inp.cores.map(c=>{
+    if(!c.on) return null;
+    return c.slots.map(s=> s.type ? TYPES.findIndex(t=>t.id===s.type) : -1);
+  });
+  const cb = bonusOfConfig(curCfg, inp.cores, inp.cls);
+  const attMul = 1 + inp.attPct/100;
+  const warns = [];
+  const base = {
+    att: inp.att - cb.att*attMul,
+    dmg: inp.dmg - cb.dmg,
+    boss: inp.boss - cb.boss,
+    cd: inp.cd - cb.cd,
+    ied: 100 * (1 - (1 - inp.ied/100) / cb.iedKeep),
+    stat: 0, sub: 0,
+  };
+  if(inp.cls==="normal"){ base.stat = inp.mainStat - cb.flat; base.sub = inp.subStat; }
+  else if(inp.cls==="xenon"){ base.stat = inp.xenonSum - cb.flat*3; }
+  else { base.stat = inp.daHP - cb.flat; }
+  ["att","cd","stat"].forEach(k=>{ if(base[k] <= 0){ base[k] = Math.max(base[k], k==="cd"?0:1); warns.push("入力値より現在のヘキサ分が大きくなっています（"+k+"）。入力を確認してください。"); }});
+  if(base.dmg<0) base.dmg=0;
+  if(base.boss<0) base.boss=0;
+  if(base.ied<0) base.ied=0;
+  return {base, curCfg, warns};
+}
+
+/* ================= 最適化（全探索） ================= */
+function optimize(inp, base){
+  const active = inp.cores.map((c,i)=> c.on ? i : -1).filter(i=>i>=0);
+  if(active.length===0) return null;
+  // 各コアの候補: メインm、付加(a1,a2) すべて異なる。付加Lvが同じなら順序を正規化して半減。
+  const perCore = active.map(i=>{
+    const lv = inp.cores[i].slots.map(s=>s.lv);
+    const opts = [];
+    for(let m=0;m<6;m++) for(let a1=0;a1<6;a1++){ if(a1===m) continue;
+      for(let a2=0;a2<6;a2++){
+        if(a2===m || a2===a1) continue;
+        if(lv[1]===lv[2] && a2 < a1) continue; // 対称の重複排除
+        const b = emptyBonus();
+        addSlot(b, TYPES[m].id,  lv[0], true,  inp.cls);
+        addSlot(b, TYPES[a1].id, lv[1], false, inp.cls);
+        addSlot(b, TYPES[a2].id, lv[2], false, inp.cls);
+        opts.push({cc:[m,a1,a2], b});
+      }
+    }
+    return {i, opts};
+  });
+  let best = null;
+  const n = perCore.length;
+  const cfg = new Array(inp.cores.length).fill(null);
+  const mainUsed = new Array(6).fill(0);
+  const addUsed  = new Array(6).fill(0);
+  const acc = {cd:0,boss:0,dmg:0,att:0,flat:0,iedKeep:1};
+  function rec(k){
+    if(k===n){
+      const s = score(base, acc, inp).v;
+      if(!best || s > best.s){ best = {s, cfg: cfg.map(c=>c?c.slice():null), b:{...acc}}; }
+      return;
+    }
+    const {i, opts} = perCore[k];
+    for(const {cc, b} of opts){
+      const [m,a1,a2] = cc;
+      if(mainUsed[m] || addUsed[a1]>=2 || addUsed[a2]>=2) continue;
+      mainUsed[m]=1; addUsed[a1]++; addUsed[a2]++;
+      cfg[i] = cc;
+      acc.cd+=b.cd; acc.boss+=b.boss; acc.dmg+=b.dmg; acc.att+=b.att; acc.flat+=b.flat; acc.iedKeep*=b.iedKeep;
+      rec(k+1);
+      acc.cd-=b.cd; acc.boss-=b.boss; acc.dmg-=b.dmg; acc.att-=b.att; acc.flat-=b.flat; acc.iedKeep/=b.iedKeep;
+      cfg[i] = null;
+      mainUsed[m]=0; addUsed[a1]--; addUsed[a2]--;
+    }
+  }
+  rec(0);
+  if(best){ // 浮動小数の累積誤差を避けるため最終ボーナスを再計算
+    best.b = bonusOfConfig(best.cfg, inp.cores, inp.cls);
+    best.s = score(base, best.b, inp).v;
+  }
+  return best;
+}
+
+/* ================= 検証・警告 ================= */
+function validate(inp, base){
+  const warns = [];
+  inp.cores.forEach((c)=>{
+    if(!c.on) return;
+    const tot = c.slots.reduce((a,x)=>a+x.lv,0);
+    if(tot>20) warns.push(`${c.label}: 合計Lvが20を超えています（${tot}）。`);
+    const set = c.slots.filter(s=>s.type).map(s=>s.type);
+    if(new Set(set).size !== set.length) warns.push(`${c.label}: 同じステータスがコア内で重複しています。`);
+  });
+  const mainCnt = {}, addCnt = {};
+  inp.cores.forEach(c=>{ if(!c.on) return;
+    if(c.slots[0].type) mainCnt[c.slots[0].type]=(mainCnt[c.slots[0].type]||0)+1;
+    [1,2].forEach(s=>{ if(c.slots[s].type) addCnt[c.slots[s].type]=(addCnt[c.slots[s].type]||0)+1; });
+  });
+  Object.entries(mainCnt).forEach(([t,n])=>{ if(n>1) warns.push(`「${TYPES.find(x=>x.id===t).name}」がメインに${n}回設定されています（メインは全コアで1回まで）。`);});
+  Object.entries(addCnt).forEach(([t,n])=>{ if(n>2) warns.push(`「${TYPES.find(x=>x.id===t).name}」が付加に${n}回設定されています（付加は全コアで2回まで）。`);});
+  const noHexa = score(base, emptyBonus(), inp);
+  if(noHexa.floored) warns.push("防御率無視が敵の防御率に対して不足しており、与ダメージがほぼ0の領域です。防御率無視の価値が極端に大きく出ます。");
+  return warns;
+}
+
+/* ================= 表示 ================= */
+const fmt = (x,d=2)=> x.toLocaleString("ja-JP",{minimumFractionDigits:d,maximumFractionDigits:d});
+function pctGain(sNew, sOld){ return (sNew/sOld - 1)*100; }
+
+function slotValText(typeId, lv, isMain, cls){
+  const t = TYPES.find(x=>x.id===typeId);
+  const v = slotValue(typeId, lv, isMain, cls);
+  if(t.kind==="att") return `+${fmt(v,0)}`;
+  if(t.kind==="flat") return cls==="xenon" ? `+${fmt(v,0)}×3` : `+${fmt(v,0)}`;
+  return `+${fmt(v, t.base<1?2:0)}%`;
+}
+
+function render(){
+  const inp = readInputs();
+  const {base, curCfg, warns:baseWarns} = computeBase(inp);
+  const warns = baseWarns.concat(validate(inp, base));
+  const s0 = score(base, emptyBonus(), inp).v;                 // ヘキサなし
+  const curB = bonusOfConfig(curCfg, inp.cores, inp.cls);
+  const hasCur = curCfg.some(c=>c && c.some(x=>x>=0));
+  const sCur = score(base, curB, inp).v;
+  const best = optimize(inp, base);
+
+  // 警告
+  document.getElementById("warnBox").innerHTML =
+    warns.map(w=>`<div class="warn">⚠ ${w}</div>`).join("");
+
+  // FDカード
+  const fdCards = document.getElementById("fdCards");
+  if(!best){
+    fdCards.innerHTML = `<div class="fdcard base"><div class="lab">有効なコアがありません</div><div class="note">右のコアにチェックを入れてください。</div></div>`;
+    document.getElementById("optCores").innerHTML = "";
+    document.getElementById("optSummary").textContent = "";
+    document.getElementById("slotTables").innerHTML = "";
+    return;
+  }
+  let cards = `
+    <div class="fdcard">
+      <div class="lab">最適構成の火力上昇（ヘキサなし比）</div>
+      <div class="num">+${fmt(pctGain(best.s, s0))}%</div>
+      <div class="note">${inp.mode==="boss"?"ボス":"狩り"}基準・敵防御率 ${fmt(inp.pdr,0)}%</div>
+    </div>`;
+  if(hasCur){
+    const dSwap = pctGain(best.s, sCur);
+    cards += `
+    <div class="fdcard base">
+      <div class="lab">現在の構成（ヘキサなし比）</div>
+      <div class="num">+${fmt(pctGain(sCur, s0))}%</div>
+      <div class="note">最適に変更すると さらに <b style="color:${dSwap>0.005?"var(--gold)":"var(--cyan)"}">+${fmt(dSwap)}%</b>${dSwap>0.005?"（種類変更は1コア1億メソ）":"（現在の構成が最適です）"}</div>
+    </div>`;
+  }
+  fdCards.innerHTML = cards;
+
+  // 最適コア表示
+  const oc = document.getElementById("optCores");
+  oc.innerHTML = inp.cores.map((c,i)=>{
+    if(!c.on) return "";
+    const cc = best.cfg[i];
+    const lv = c.slots.map(s=>s.lv);
+    const rows = [0,1,2].map(s=>{
+      const t = TYPES[cc[s]];
+      const role = s===0 ? '<span class="role">メイン</span>' : '<span class="role add">付加</span>';
+      const changed = c.slots[s].type && c.slots[s].type !== t.id;
+      return `<div class="optline">
+        <span class="nm">${role}${t.name}${changed?' <span style="color:var(--gold);font-size:10.5px">←変更</span>':""}</span>
+        <span class="val">Lv${lv[s]}　${lv[s]>0 ? slotValText(t.id, lv[s], s===0, inp.cls) : "—"}</span>
+      </div>`;
+    }).join("");
+    return `<div class="optcore"><h4>⬢ ${c.label}（合計Lv ${lv[0]+lv[1]+lv[2]}）</h4>${rows}</div>`;
+  }).join("");
+
+  // 合計ボーナスの内訳
+  const b = best.b;
+  const iedPct = (1 - b.iedKeep)*100;
+  const parts = [];
+  if(b.att)  parts.push(`攻撃力/魔力 +${fmt(b.att,0)}（表示値換算 +${fmt(b.att*(1+inp.attPct/100),0)}）`);
+  if(b.boss) parts.push(`ボスダメ +${fmt(b.boss,0)}%`);
+  if(b.cd)   parts.push(`クリダメ +${fmt(b.cd,2)}%`);
+  if(b.dmg)  parts.push(`ダメージ +${fmt(b.dmg,2)}%`);
+  if(iedPct>0.001) parts.push(`防御無視 +${fmt(iedPct,1)}%（乗算）`);
+  if(b.flat) parts.push(inp.cls==="xenon" ? `オールステ +${fmt(b.flat,0)}` : (inp.cls==="da" ? `MaxHP +${fmt(b.flat,0)}` : `メインステ +${fmt(b.flat,0)}`));
+  document.getElementById("optSummary").innerHTML =
+    parts.length ? `最適構成の合計ボーナス： <code>${parts.join("　/　")}</code>` : "";
+
+  // スロット別 単体効率表
+  const st = document.getElementById("slotTables");
+  st.innerHTML = inp.cores.map((c,i)=>{
+    if(!c.on) return "";
+    const lv = c.slots.map(s=>s.lv);
+    const mergedAdd = lv[1]===lv[2];
+    const cols = mergedAdd ? [["メイン枠 Lv"+lv[0],0],["付加枠 Lv"+lv[1],1]]
+                           : [["メイン枠 Lv"+lv[0],0],["付加枠1 Lv"+lv[1],1],["付加枠2 Lv"+lv[2],2]];
+    const data = TYPES.map((t,ti)=>{
+      const cells = cols.map(([,s])=>{
+        if(lv[s]===0) return {txt:"—", zero:true, pick:false};
+        const bb = addSlot(emptyBonus(), t.id, lv[s], s===0, inp.cls);
+        const g = pctGain(score(base, bb, inp).v, s0);
+        const pick = best.cfg[i][s]===ti || (mergedAdd && s===1 && best.cfg[i][2]===ti);
+        return {txt:"+"+fmt(g)+"%", zero:g<0.005, pick};
+      });
+      return {t, cells, sort: cells[0].zero&&cells[0].txt==="—" ? -1 : parseFloat(cells[0].txt.replace("+","")) || 0};
+    }).sort((a,z)=> z.sort - a.sort);
+    const head = `<tr><th>ステータス</th>${cols.map(c=>`<th>${c[0]}</th>`).join("")}</tr>`;
+    const rows = data.map((d,ri)=>`<tr class="${ri===0?"rank1":""}"><td>${d.t.name}</td>${
+      d.cells.map(cell=>`<td class="${cell.pick?"pick":cell.zero?"zero":""}">${cell.txt}</td>`).join("")
+    }</tr>`).join("");
+    return `<div class="optcore tablecard"><h4>⬢ ${c.label}</h4><table>${head}${rows}</table></div>`;
+  }).join("");
+}
+
+/* ================= 参考テーブル生成 ================= */
+(function(){
+  const tbl = document.getElementById("valueTable");
+  let html = `<tr><th>Lv</th><th>クリダメ<br>メイン/付加</th><th>ボスダメ・防御無視<br>メイン/付加</th><th>ダメージ<br>メイン/付加</th><th>攻/魔<br>メイン/付加</th><th>メインステ<br>メイン/付加</th></tr>`;
+  for(let lv=1; lv<=10; lv++){
+    const m = MAIN_MULT[lv], a = ADD_MULT[lv];
+    html += `<tr><td>${lv}</td>
+      <td>${fmt(0.35*m,2)}% / ${fmt(0.35*a,2)}%</td>
+      <td>${m}% / ${a}%</td>
+      <td>${fmt(0.75*m,2)}% / ${fmt(0.75*a,2)}%</td>
+      <td>${m*5} / ${a*5}</td>
+      <td>${m*100} / ${a*100}</td></tr>`;
+  }
+  tbl.innerHTML = html;
+})();
+
+/* ================= イベント ================= */
+let pdrTouched = false;
+document.getElementById("pdr").addEventListener("input", ()=>{ pdrTouched = true; });
+document.getElementById("modeBoss").addEventListener("click", ()=>setMode("boss"));
+document.getElementById("modeHunt").addEventListener("click", ()=>setMode("hunt"));
+function setMode(m){
+  mode = m;
+  document.getElementById("modeBoss").classList.toggle("on", m==="boss");
+  document.getElementById("modeHunt").classList.toggle("on", m==="hunt");
+  if(!pdrTouched) document.getElementById("pdr").value = (m==="boss") ? 300 : 30;
+  render();
+}
+document.getElementById("cls").addEventListener("change", e=>{
+  const v = e.target.value;
+  document.getElementById("statNormal").style.display = v==="normal" ? "" : "none";
+  document.getElementById("statXenon").style.display  = v==="xenon"  ? "" : "none";
+  document.getElementById("statDA").style.display     = v==="da"     ? "" : "none";
+  render();
+});
+let timer = null;
+document.querySelectorAll("input,select").forEach(el=>{
+  el.addEventListener("input", ()=>{ clearTimeout(timer); timer = setTimeout(render, 120); });
+  el.addEventListener("change", ()=>{ clearTimeout(timer); timer = setTimeout(render, 60); });
+});
+render();
+</script>
+</body>
+</html>
