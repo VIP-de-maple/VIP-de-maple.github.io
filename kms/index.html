@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KMS動画検索 変換辞典 ― 職業・ボス・狩り場の韓国語通称</title>
+<style>
+  :root{
+    --bg:#14101f;
+    --panel:#1d1830;
+    --panel2:#241d3a;
+    --line:#332a4d;
+    --cyan:#59e3d8;
+    --cyan-dim:rgba(89,227,216,.12);
+    --gold:#f2c14e;
+    --gold-dim:rgba(242,193,78,.12);
+    --violet:#b28bf0;
+    --txt:#e8e4f5;
+    --muted:#9a92b5;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;
+    --jp:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{color-scheme:dark}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(1000px 500px at 85% -10%, rgba(89,227,216,.06), transparent 60%),
+      radial-gradient(800px 420px at 0% 110%, rgba(140,90,220,.08), transparent 60%);
+    color:var(--txt);
+    font-family:var(--jp);
+    font-size:14px;
+    line-height:1.65;
+    padding:28px 16px 120px;
+  }
+  .wrap{max-width:980px;margin:0 auto}
+
+  header{margin-bottom:20px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .hexmark{width:52px;height:58px;flex:none}
+  h1{font-size:21px;font-weight:800;letter-spacing:.05em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:3px;max-width:640px}
+
+  .howto{background:var(--cyan-dim);border:1px solid rgba(89,227,216,.3);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--txt);margin-bottom:16px}
+  .howto b{color:var(--cyan)}
+
+  /* 検索欄 */
+  .searchbar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  #q{
+    flex:1;min-width:240px;background:#120e1d;border:1px solid var(--line);color:var(--txt);
+    border-radius:10px;padding:12px 16px;font-size:16px;font-family:var(--jp);
+  }
+  #q:focus{outline:2px solid var(--cyan);border-color:transparent}
+  .cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .cat{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:999px;
+    padding:6px 16px;font-size:12.5px;font-family:var(--jp);cursor:pointer;font-weight:700}
+  .cat.on{background:var(--cyan-dim);color:var(--cyan);border-color:rgba(89,227,216,.45)}
+
+  /* クエリビルダー */
+  .builder{
+    position:sticky;top:8px;z-index:20;
+    background:var(--panel2);border:1px solid rgba(242,193,78,.4);border-radius:12px;
+    padding:10px 14px;margin-bottom:20px;box-shadow:0 6px 24px rgba(0,0,0,.45);
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  }
+  .builder .lab{font-size:11px;letter-spacing:.14em;color:var(--gold);font-weight:700;flex:none}
+  #query{
+    flex:1;min-width:180px;background:#120e1d;border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:8px 12px;font-size:15px;font-family:var(--mono);
+  }
+  #query:focus{outline:2px solid var(--gold);border-color:transparent}
+  .builder button{
+    border:0;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--jp);
+  }
+  #copyBtn{background:var(--gold);color:#221a05}
+  #ytBtn{background:#ff4b4b;color:#fff}
+  #clearBtn{background:transparent;color:var(--muted);border:1px solid var(--line)}
+
+  /* 結果 */
+  .count{font-size:11.5px;color:var(--muted);margin-bottom:10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  .card .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+  .card h3{font-size:15px;font-weight:800}
+  .card .cattag{font-size:10px;letter-spacing:.1em;color:var(--violet);border:1px solid rgba(178,139,240,.4);border-radius:999px;padding:1px 8px;flex:none}
+  .card .alias{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
+  .chip{
+    border-radius:8px;padding:5px 12px;font-size:14px;font-family:var(--mono);cursor:pointer;
+    border:1px solid var(--line);background:#120e1d;color:var(--txt);font-weight:700;
+    transition:transform .06s;
+  }
+  .chip:hover{transform:translateY(-1px)}
+  .chip.best{background:var(--gold-dim);border-color:rgba(242,193,78,.5);color:var(--gold)}
+  .chip.official{border-style:dashed;color:var(--muted);font-weight:400}
+  .chip.flash{outline:2px solid var(--cyan)}
+  .diffrow{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px dashed rgba(255,255,255,.07)}
+  .diffrow .dlab{font-size:10.5px;color:var(--muted);align-self:center;margin-right:2px}
+  .dchip{
+    border-radius:6px;padding:3px 9px;font-size:12px;font-family:var(--mono);cursor:pointer;
+    border:1px solid rgba(178,139,240,.35);background:transparent;color:var(--violet);
+  }
+  .dchip:hover{background:rgba(178,139,240,.12)}
+  .card .note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+  .card .note.warn{color:#ffb0b0}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin:14px 0 18px}
+  .legend .sw{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+
+  /* トースト */
+  #toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);
+    background:var(--cyan);color:#06211e;font-weight:700;font-size:13px;
+    border-radius:999px;padding:9px 22px;opacity:0;pointer-events:none;transition:all .25s;z-index:50;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .footnote{margin-top:34px;font-size:11px;color:var(--muted);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <svg class="hexmark" viewBox="0 0 52 58" aria-hidden="true">
+    <polygon points="26,2 50,15 50,43 26,56 2,43 2,15" fill="none" stroke="#59e3d8" stroke-width="2.5"/>
+    <polygon points="26,14 40,22 40,36 26,44 12,36 12,22" fill="rgba(89,227,216,.12)" stroke="#f2c14e" stroke-width="1.5"/>
+  </svg>
+  <div>
+    <h1>KMS動画検索 変換辞典</h1>
+    <div class="sub">職業・ボス・狩り場・頻出ワードを日本語で探して、韓国のコミュニティで実際に使われる通称(나로・하스우・여로 など)に変換。チップをタップして検索語を組み立て、そのまま YouTube へ。</div>
+  </div>
+</header>
+
+<div class="howto">
+  <b>使い方:</b> ①下の検索欄に日本語で入力(例: メルセデス、スウ、旅路) → ②カードの<b>韓国語チップをタップ</b>すると上の検索語ボックスに追加&コピー → ③「▶ YouTube」で検索。ボスは難易度ボタン(노멀/하드…)で複合形(하스우 등)を直接追加できます。<b>金色チップ=韓国で一番よく使われる通称</b>、点線チップ=正式名称。組み合わせ例: <span style="font-family:var(--mono)">나로 하스우 솔플</span>(ナイトロードのハードスウソロ)
+</div>
+
+<div class="builder">
+  <span class="lab">検索語</span>
+  <input id="query" type="text" placeholder="チップをタップすると追加されます" spellcheck="false">
+  <button id="copyBtn">コピー</button>
+  <button id="ytBtn">▶ YouTube</button>
+  <button id="clearBtn">クリア</button>
+</div>
+
+<div class="searchbar">
+  <input id="q" type="search" placeholder="日本語で検索(職業名・ボス名・狩り場・用語 / 略称でもOK)" spellcheck="false" autocomplete="off">
+</div>
+<div class="cats" id="cats"></div>
+<div class="legend">
+  <span><span class="sw" style="background:var(--gold-dim);border:1px solid rgba(242,193,78,.5)"></span>よく使われる通称(まずこれで検索)</span>
+  <span><span class="sw" style="background:#120e1d;border:1px dashed var(--line)"></span>正式名称</span>
+  <span><span class="sw" style="border:1px solid rgba(178,139,240,.4)"></span>難易度つき複合形</span>
+</div>
+
+<div class="count" id="count"></div>
+<div class="grid" id="results"></div>
+
+<div class="footnote">
+  2026年7月19日時点の調査(namu.wiki・inven・YouTube の実使用例、JMS公式表記)に基づく非公式ファンツール。通称は流行り廃りがあるため、ヒットしない場合は正式名称チップで再検索を。ハヤト・カンナ等の JMS 限定職は KMS に存在しないため動画は基本的に見つかりません。ⓒ 各権利は NEXON / NEXON Korea に帰属します。
+</div>
+
+</div>
+<div id="toast">コピーしました</div>
+
+<script>
+"use strict";
+/* ============ データ ============
+   cat: job=職業 / boss=ボス / map=狩り場 / term=検索ワード
+   kr[0]が最頻通称(金色)。official は点線チップ。
+   diffs: ボスの難易度→検索語(韓国で定着した融合形があればそれ、なければ分離形) */
+const DATA = [
+/* ---------- 職業: 冒険家 ---------- */
+{cat:"job",jp:"ヒーロー",al:[],official:"히어로",kr:["히어로"],note:""},
+{cat:"job",jp:"パラディン",al:["パラ"],official:"팔라딘",kr:["팔라딘"],note:""},
+{cat:"job",jp:"ダークナイト",al:["ダクナイ","DK"],official:"다크나이트",kr:["다나"],note:"「다나」が定番略称"},
+{cat:"job",jp:"アークメイジ(火・毒)",al:["火毒","かどく","メイジ火毒"],official:"아크메이지(불,독)",kr:["불독"],note:"「불독」が超定番。※犬のブルドッグと同綴りなので「메이플 불독」等で絞ると確実"},
+{cat:"job",jp:"アークメイジ(氷・雷)",al:["氷雷","ひょうらい","メイジ氷雷"],official:"아크메이지(썬,콜)",kr:["썬콜"],note:"KMSは属性表記順が「雷・氷(썬,콜)」と逆"},
+{cat:"job",jp:"ビショップ",al:["ビショ"],official:"비숍",kr:["비숍"],note:""},
+{cat:"job",jp:"ボウマスター",al:["ボウマス","弓"],official:"보우마스터",kr:["보마"],note:""},
+{cat:"job",jp:"クロスボウマスター",al:["クロボ"],official:"신궁",kr:["신궁"],note:"⚠ KMS名は신궁(神弓)で日本名と全く違う。신궁で検索必須"},
+{cat:"job",jp:"パスファインダー",al:["パスファ"],official:"패스파인더",kr:["패파"],note:""},
+{cat:"job",jp:"ナイトロード",al:["ナイロ","NL"],official:"나이트로드",kr:["나로"],note:"「나로」が超定番"},
+{cat:"job",jp:"シャドー",al:["シャドウ"],official:"섀도어",kr:["섀도어","섀도"],note:""},
+{cat:"job",jp:"デュアルブレイド",al:["デュアル","DB"],official:"듀얼블레이드",kr:["듀블"],note:""},
+{cat:"job",jp:"バイパー",al:[],official:"바이퍼",kr:["바이퍼"],note:""},
+{cat:"job",jp:"キャプテン",al:[],official:"캡틴",kr:["캡틴"],note:""},
+{cat:"job",jp:"キャノンシューター",al:["キャノン"],official:"캐논슈터",kr:["캐슈","캐논슈터"],note:""},
+/* ---------- 職業: シグナス ---------- */
+{cat:"job",jp:"ソウルマスター",al:["ソルマス"],official:"소울마스터",kr:["소마"],note:""},
+{cat:"job",jp:"フレイムウィザード",al:[],official:"플레임위자드",kr:["플위"],note:""},
+{cat:"job",jp:"ウインドシューター",al:["ウィンドシューター","WS"],official:"윈드브레이커",kr:["윈브"],note:"⚠ KMS名はウィンドブレイカー(윈드브레이커)。日本名と異なる"},
+{cat:"job",jp:"ナイトウォーカー",al:[],official:"나이트워커",kr:["나워"],note:""},
+{cat:"job",jp:"ストライカー",al:[],official:"스트라이커",kr:["스커"],note:""},
+{cat:"job",jp:"ミハイル",al:[],official:"미하일",kr:["미하일"],note:""},
+/* ---------- 職業: 英雄 ---------- */
+{cat:"job",jp:"アラン",al:[],official:"아란",kr:["아란"],note:""},
+{cat:"job",jp:"エヴァン",al:[],official:"에반",kr:["에반"],note:""},
+{cat:"job",jp:"メルセデス",al:["メル"],official:"메르세데스",kr:["메르","메르세데스"],note:""},
+{cat:"job",jp:"ファントム",al:[],official:"팬텀",kr:["팬텀"],note:""},
+{cat:"job",jp:"ルミナス",al:[],official:"루미너스",kr:["루미","루미너스"],note:""},
+{cat:"job",jp:"隠月",al:["ウンウォル","いんげつ","エウンウォル"],official:"은월",kr:["은월"],note:"⚠ 日本語表記は漢字。検索は은월で"},
+/* ---------- 職業: レジスタンス ---------- */
+{cat:"job",jp:"ブラスター",al:[],official:"블래스터",kr:["블래"],note:""},
+{cat:"job",jp:"バトルメイジ",al:["バトメ"],official:"배틀메이지",kr:["배메"],note:""},
+{cat:"job",jp:"ワイルドハンター",al:["ワイハン"],official:"와일드헌터",kr:["와헌"],note:""},
+{cat:"job",jp:"メカニック",al:["メカ"],official:"메카닉",kr:["메카"],note:""},
+{cat:"job",jp:"デーモンスレイヤー",al:["デモスレ"],official:"데몬슬레이어",kr:["데슬"],note:""},
+{cat:"job",jp:"デーモンアヴェンジャー",al:["デモアベ","デーモンアベンジャー"],official:"데몬어벤져",kr:["데벤"],note:""},
+{cat:"job",jp:"ゼノン",al:[],official:"제논",kr:["제논"],note:""},
+/* ---------- 職業: ノバ/レフ/アニマ/その他 ---------- */
+{cat:"job",jp:"カイザー",al:[],official:"카이저",kr:["카이저"],note:""},
+{cat:"job",jp:"カイン",al:[],official:"카인",kr:["카인"],note:""},
+{cat:"job",jp:"カデナ",al:[],official:"카데나",kr:["카데나"],note:""},
+{cat:"job",jp:"エンジェリックバスター",al:["エンバス","AB"],official:"엔젤릭버스터",kr:["엔버"],note:"「엔버」が超定番"},
+{cat:"job",jp:"アデル",al:[],official:"아델",kr:["아델"],note:""},
+{cat:"job",jp:"イリウム",al:["イリューム"],official:"일리움",kr:["일리움"],note:""},
+{cat:"job",jp:"カーリー",al:["カリ"],official:"칼리",kr:["칼리"],note:""},
+{cat:"job",jp:"アーク",al:[],official:"아크",kr:["아크"],note:""},
+{cat:"job",jp:"虎影",al:["こえい","ホヨン"],official:"호영",kr:["호영"],note:"⚠ 日本語表記は漢字。検索は호영で"},
+{cat:"job",jp:"ララ",al:[],official:"라라",kr:["라라"],note:""},
+{cat:"job",jp:"ゼロ",al:[],official:"제로",kr:["제로"],note:""},
+{cat:"job",jp:"キネシス",al:[],official:"키네시스",kr:["키네시스"],note:""},
+{cat:"job",jp:"レン",al:[],official:"렌",kr:["렌"],note:"2025年実装。略称は未定着"},
+{cat:"job",jp:"レテ",al:[],official:"레테",kr:["레테"],note:"2026年6月実装の最新職。略称は未定着"},
+{cat:"job",jp:"森の子リン",al:["リン","ビーストテイマー"],official:"린",kr:["린"],note:"旧ビーストテイマー(비스트테이머)。KMSでの現行取り扱いは要確認"},
+{cat:"job",jp:"ハヤト",al:[],official:"(KMS未実装)",kr:[],note:"⚠ KMSに存在しない職。KMS動画は基本ヒットしません",warn:true},
+{cat:"job",jp:"カンナ",al:[],official:"(KMS未実装)",kr:[],note:"⚠ KMSに存在しない職。KMS動画は基本ヒットしません",warn:true},
+/* ---------- ボス ---------- */
+{cat:"boss",jp:"ザクム",al:["ジャクム"],official:"자쿰",kr:["자쿰"],note:"",diffs:{"이지":"이지 자쿰","노멀":"노멀 자쿰","카오스":"카오스 자쿰"}},
+{cat:"boss",jp:"ホーンテイル",al:["ホンテ"],official:"혼테일",kr:["혼테일","카혼"],note:"「카혼」=カオスホンテの定番略称",diffs:{"노멀":"노멀 혼테일","카오스":"카혼"}},
+{cat:"boss",jp:"マグナス",al:[],official:"매그너스",kr:["매그너스"],note:"",diffs:{"이지":"이지 매그너스","노멀":"노멀 매그너스","하드":"하드매그너스"}},
+{cat:"boss",jp:"ヒルラ",al:[],official:"힐라",kr:["힐라"],note:"真ヒルラ(진힐라)とは別ボス",diffs:{"노멀":"노멀 힐라","하드":"하드 힐라"}},
+{cat:"boss",jp:"パプラトゥス",al:["パプ","時計"],official:"파풀라투스",kr:["파풀라투스"],note:""},
+{cat:"boss",jp:"ピンクビーン",al:["ピンビ"],official:"핑크빈",kr:["핑크빈"],note:"",diffs:{"노멀":"노멀 핑크빈","카오스":"카오스 핑크빈"}},
+{cat:"boss",jp:"女帝シグナス",al:["シグナス"],official:"여제 시그너스",kr:["시그너스"],note:""},
+{cat:"boss",jp:"ヴァンレオン",al:["バンレオン"],official:"반 레온",kr:["반레온"],note:"",diffs:{"이지":"이지 반레온","노멀":"노멀 반레온","하드":"하드 반레온"}},
+{cat:"boss",jp:"アカイラム",al:[],official:"아카이럼",kr:["아카이럼"],note:""},
+{cat:"boss",jp:"破王ウルス",al:["ウルス"],official:"파왕 우르스",kr:["우르스"],note:"過去の18人レイド(現在は整理済み)。古い動画の検索用"},
+{cat:"boss",jp:"バンバン",al:[],official:"반반",kr:["반반"],note:"ルートアビス四天王",diffs:{"노멀":"노멀 반반","카오스":"카오스 반반"}},
+{cat:"boss",jp:"ピエール",al:[],official:"피에르",kr:["피에르"],note:"ルートアビス四天王",diffs:{"노멀":"노멀 피에르","카오스":"카오스 피에르"}},
+{cat:"boss",jp:"ブラッディクイーン",al:["クイーン"],official:"블러디퀸",kr:["블러디퀸"],note:"ルートアビス四天王",diffs:{"노멀":"노멀 블러디퀸","카오스":"카오스 블러디퀸"}},
+{cat:"boss",jp:"ヴェルム",al:["ベルルム","ベルム"],official:"벨룸",kr:["벨룸","카벨"],note:"「카벨룸/카벨」=カオスヴェルムの定番略称",diffs:{"노멀":"노멀 벨룸","카오스":"카벨룸"}},
+{cat:"boss",jp:"スゥ",al:["スウ","ロータス"],official:"스우",kr:["스우","하스우"],note:"「하스우」が超定番の複合略称",diffs:{"노멀":"노멀 스우","하드":"하스우","익스트림":"익스트림 스우"}},
+{cat:"boss",jp:"デミアン",al:[],official:"데미안",kr:["데미안"],note:"",diffs:{"노멀":"노멀 데미안","하드":"하드 데미안"}},
+{cat:"boss",jp:"ガーディアンエンジェルスライム",al:["スライム","GAS"],official:"가디언 엔젤 슬라임",kr:["가엔슬"],note:"「가엔슬」が定着略称",diffs:{"노멀":"노멀 가엔슬","카오스":"카오스 가엔슬"}},
+{cat:"boss",jp:"ルシード",al:["ルシ"],official:"루시드",kr:["루시드","노루시"],note:"「노루시」=ノーマルルシードの定番略称",diffs:{"이지":"이지 루시드","노멀":"노루시","하드":"하드 루시드"}},
+{cat:"boss",jp:"ウィル",al:[],official:"윌",kr:["윌"],note:"",diffs:{"이지":"이지 윌","노멀":"노멀 윌","하드":"하드 윌"}},
+{cat:"boss",jp:"ダスク",al:["グルーム"],official:"더스크",kr:["더스크"],note:"",diffs:{"노멀":"노멀 더스크","카오스":"카오스 더스크"}},
+{cat:"boss",jp:"デュンケル",al:["ドゥンケル"],official:"듄켈",kr:["듄켈"],note:"",diffs:{"노멀":"노멀 듄켈","하드":"하드 듄켈"}},
+{cat:"boss",jp:"真ヒルラ",al:["真ヒラ"],official:"진 힐라",kr:["진힐라"],note:"解放クエストの難所として有名",diffs:{"노멀":"노멀 진힐라","하드":"하드 진힐라"}},
+{cat:"boss",jp:"黒の魔法使い",al:["暗黒の魔法使い","黒魔","くろまげ"],official:"검은 마법사",kr:["검마"],note:"「검마」が超定番。関連定番語「검밑솔」(検索ワード参照)",diffs:{"하드":"하드 검마","익스트림":"익스트림 검마"}},
+{cat:"boss",jp:"選ばれし者セレン",al:["セレン"],official:"선택받은 세렌",kr:["세렌","하세렌"],note:"난이도융합형(노세렌/하세렌/익세렌)が定着",diffs:{"노멀":"노세렌","하드":"하세렌","익스트림":"익세렌"}},
+{cat:"boss",jp:"監視者カロス",al:["カロス"],official:"감시자 칼로스",kr:["칼로스"],note:"",diffs:{"이지":"이지 칼로스","노멀":"노멀 칼로스","카오스":"카오스 칼로스","익스트림":"익스트림 칼로스"}},
+{cat:"boss",jp:"カリング",al:["カーリング","カリーン","カリン"],official:"카링",kr:["카링","하카링"],note:"익카링は初撃破まで620日かかった最難関級として有名",diffs:{"이지":"이지 카링","노멀":"노멀 카링","하드":"하카링","익스트림":"익카링"}},
+{cat:"boss",jp:"リンボ",al:[],official:"림보",kr:["림보"],note:"",diffs:{"노멀":"노멀 림보","하드":"하드 림보","익스트림":"익스트림 림보"}},
+{cat:"boss",jp:"バルドリックス",al:["バルド"],official:"발드릭스",kr:["발드릭스"],note:"",diffs:{"노멀":"노멀 발드릭스","하드":"하드 발드릭스"}},
+{cat:"boss",jp:"最初の対敵者",al:["最初の大敵者"],official:"최초의 대적자",kr:["최적자"],note:"「최적자」が定着略称。最大3人PT",diffs:{"이지":"이지 최적자","노멀":"노멀 최적자","하드":"하드 최적자","익스트림":"익스트림 최적자"}},
+{cat:"boss",jp:"燦爛たる凶星",al:["凶星","きょうせい"],official:"찬란한 흉성",kr:["흉성"],note:"修飾語を落として「흉성」と呼ぶのが定番。最大3人PT。難易度は分離表記(하드 흉성)が主流",diffs:{"노멀":"노멀 흉성","하드":"하드 흉성"}},
+{cat:"boss",jp:"ユピテル",al:[],official:"유피테르",kr:["유피테르"],note:"KMS 2026年実装の新ボス"},
+/* ---------- 狩り場 ---------- */
+{cat:"map",jp:"消滅の旅路",al:["旅路"],official:"소멸의 여로",kr:["여로"],note:"アーケインリバー最初の地域(Lv200〜)"},
+{cat:"map",jp:"チュチュアイランド",al:["チューチューアイランド","チュチュ"],official:"츄츄 아일랜드",kr:["츄츄"],note:"人気マップ: 몽땅 동글숲(몽동)・에르밸리 격류지대(격류)"},
+{cat:"map",jp:"レヘルン",al:["夢の都市レヘルン"],official:"꿈의 도시 레헬른",kr:["레헬른","렐른"],note:"人気マップ: 닭이 뛰노는 곳(닭뛰)"},
+{cat:"map",jp:"アルカナ",al:["神秘の森アルカナ"],official:"신비의 숲 아르카나",kr:["아르카나","알카나"],note:""},
+{cat:"map",jp:"モラス",al:["記憶の沼モラス"],official:"기억의 늪 모라스",kr:["모라스"],note:"人気マップ: 그림자가 춤추는 곳(그춤)"},
+{cat:"map",jp:"エスフェラ",al:["エスペラ","太初の海エスフェラ"],official:"태초의 바다 에스페라",kr:["에스페라"],note:"人気マップ: 거울빛에 물든 바다"},
+{cat:"map",jp:"ムーンブリッジ",al:[],official:"문브릿지",kr:["문브릿지","문브"],note:""},
+{cat:"map",jp:"リメン",al:[],official:"리멘",kr:["리멘"],note:"アーケインリバー最終地域"},
+{cat:"map",jp:"セルニウム",al:[],official:"세르니움",kr:["세르니움"],note:"グランディス最初の地域(Lv260〜)"},
+{cat:"map",jp:"ホテルアルクス",al:[],official:"호텔 아르크스",kr:["아르크스"],note:""},
+{cat:"map",jp:"オーディウム",al:["オディウム"],official:"오디움",kr:["오디움"],note:"人気マップ: 골목1・성문으로 가는 길"},
+{cat:"map",jp:"桃源郷",al:["とうげんきょう","シャングリラ"],official:"도원경",kr:["도원경"],note:"人気マップ: 여름(夏)系列、特に여름3"},
+{cat:"map",jp:"アルテリア",al:[],official:"아르테리아",kr:["아르테리아"],note:"Lv280〜"},
+{cat:"map",jp:"カルシオン",al:[],official:"카르시온",kr:["카르시온"],note:""},
+{cat:"map",jp:"タラハート",al:["タラハト"],official:"탈라하트",kr:["탈라하트"],note:""},
+{cat:"map",jp:"レヘルンの人気マップ(鶏が跳ねる場所)",al:["닭뛰"],official:"닭이 뛰노는 곳",kr:["닭뛰"],note:"レヘルンの定番狩り場。日本語公式名は未確認"},
+{cat:"map",jp:"チュチュの人気マップ(どんぐりの森)",al:["몽동"],official:"몽땅 동글숲",kr:["몽동"],note:"チュチュの定番狩り場。日本語公式名は未確認"},
+{cat:"map",jp:"チュチュの人気マップ(激流地帯)",al:["격류"],official:"에르밸리 격류지대",kr:["격류"],note:"日本語公式名は未確認"},
+{cat:"map",jp:"モラスの人気マップ(影が踊る場所)",al:["그춤"],official:"그림자가 춤추는 곳",kr:["그춤"],note:"日本語公式名は未確認"},
+/* ---------- 検索ワード ---------- */
+{cat:"term",jp:"狩り場",al:["狩場"],official:"사냥터",kr:["사냥터"],note:"「◯◯(職) 사냥터」で職業別の狩り場動画がヒット"},
+{cat:"term",jp:"狩り",al:[],official:"사냥",kr:["사냥"],note:""},
+{cat:"term",jp:"定点狩り",al:["定点"],official:"제자리 사냥",kr:["제자리 사냥"],note:"「◯◯(職) 제자리 사냥터」が動画タイトルの定番形"},
+{cat:"term",jp:"湧き",al:["リポップ","ジェン"],official:"젠(리젠)",kr:["젠"],note:"湧き量は「젠량」"},
+{cat:"term",jp:"ソロ",al:["ソロプレイ","ソロ攻略"],official:"솔로 플레이",kr:["솔플"],note:"「◯◯ 솔플」=◯◯ソロ攻略"},
+{cat:"term",jp:"撃破",al:["討伐","クリア"],official:"격파",kr:["격파","클리어"],note:""},
+{cat:"term",jp:"ワントライ",al:["一発クリア"],official:"원트라이",kr:["원트"],note:"初見/一発クリアの意"},
+{cat:"term",jp:"ノーデス",al:["デスなし"],official:"노 데스",kr:["노데스"],note:""},
+{cat:"term",jp:"トライ",al:["挑戦"],official:"트라이",kr:["트라이"],note:"攻略挑戦(トライ)動画"},
+{cat:"term",jp:"ラストヒット",al:["とどめ"],official:"막타",kr:["막타"],note:"撃破の決定打シーン"},
+{cat:"term",jp:"黒魔未満全ボスソロ",al:["検密ソル","黒魔下ソロ"],official:"검마 밑 솔플",kr:["검밑솔"],note:"黒の魔法使いより下の週ボスを全部ソロで回す意。週回収益の指標としても頻出"},
+{cat:"term",jp:"メソ獲得量",al:["メル獲得"],official:"메소 획득량",kr:["메획"],note:""},
+{cat:"term",jp:"アイテムドロップ率",al:["ドロ率"],official:"아이템 드롭률",kr:["아획"],note:"「아획 세팅」等"},
+{cat:"term",jp:"ドロメソ装備",al:["ドロップメソ"],official:"드메 세팅",kr:["드메","드메템"],note:"ドロップ率+メソ獲得を両立させた装備セット"},
+{cat:"term",jp:"金策周回(2時間セッション)",al:["再獲"],official:"재획",kr:["재획"],note:"旧バフ「財物獲得の秘薬」由来。約2時間の狩りセッション=1재획"},
+{cat:"term",jp:"経験値ゲージ",al:["経験値量"],official:"경험치통",kr:["경험치통","경통"],note:"1レベル分の必要経験値"},
+{cat:"term",jp:"バーニング",al:[],official:"버닝",kr:["버닝"],note:"메가 버닝/테라 버닝 等"},
+{cat:"term",jp:"スターフォース",al:["スタフォ"],official:"스타포스",kr:["스타포스","스포"],note:""},
+{cat:"term",jp:"潜在能力",al:["ポテンシャル"],official:"잠재능력",kr:["잠재"],note:""},
+{cat:"term",jp:"キューブ",al:[],official:"큐브",kr:["큐브"],note:""},
+{cat:"term",jp:"コアジェムストーン",al:["コアジェム"],official:"코어 젬스톤",kr:["코어젬"],note:""},
+{cat:"term",jp:"ソルエルダ",al:["ソル・エルダ"],official:"솔 에르다",kr:["솔에르다"],note:""},
+{cat:"term",jp:"ソルエルダの欠片",al:["エルダの欠片"],official:"솔 에르다 조각",kr:["에르다 조각","솔조각"],note:""},
+{cat:"term",jp:"HEXA(6次)",al:["ヘキサ","6次"],official:"HEXA 매트릭스",kr:["헥사","6차"],note:"「◯◯(職) 헥사」でコア優先度動画がヒット"},
+{cat:"term",jp:"ステ攻撃力",al:["スキル攻撃力"],official:"스탯 공격력",kr:["스공"],note:"近年は전투력(戦闘力)表記が主流"},
+{cat:"term",jp:"戦闘力",al:[],official:"전투력",kr:["전투력"],note:"スペック指標の現行主流"},
+{cat:"term",jp:"スペック",al:[],official:"스펙",kr:["스펙"],note:"「스펙업」=スペックアップ"},
+{cat:"term",jp:"最終装備",al:["終結"],official:"종결",kr:["종결"],note:"「종결 세팅」=最終装備構成"},
+{cat:"term",jp:"ユニオン",al:[],official:"메이플 유니온",kr:["유니온"],note:""},
+{cat:"term",jp:"リンクスキル",al:["リンク"],official:"링크 스킬",kr:["링크"],note:""},
+{cat:"term",jp:"ジェネシス武器",al:["ジェネ武器"],official:"제네시스 무기",kr:["제네"],note:""},
+{cat:"term",jp:"オーセンティックフォース",al:["AUT","オーセン"],official:"어센틱 포스",kr:["어센틱"],note:"グランディス地域の必要フォース"},
+{cat:"term",jp:"アーケインフォース",al:["ARC","アケフォ"],official:"아케인 포스",kr:["아케인"],note:"アーケインリバー地域の必要フォース"},
+{cat:"term",jp:"ボス攻撃力",al:["ボスダメ"],official:"보스 공격력",kr:["보공"],note:""},
+{cat:"term",jp:"難易度の略し方",al:["イージー","ノーマル","ハード","カオス","エクストリーム"],official:"난이도 약칭",kr:["이지","노멀","하드","카오스","익스트림"],note:"頭文字1字+ボス名で融合するのが定番(하스우・노루시・카혼)。人型ボスは하드系、非人型は카오스系の難易度体系"},
+];
+
+/* ============ ユーティリティ ============ */
+const kataToHira = s => s.replace(/[ァ-ヶ]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60));
+const norm = s => kataToHira(String(s).toLowerCase().normalize("NFKC")).replace(/[\s・･()（）,、.。ー\-]/g, "");
+DATA.forEach(d => { d._keys = [d.jp, ...(d.al||[]), d.official||"", ...(d.kr||[])].map(norm); });
+
+const CATS = [["all","すべて"],["job","職業"],["boss","ボス"],["map","狩り場"],["term","検索ワード"]];
+const CATLABEL = {job:"職業", boss:"ボス", map:"狩り場", term:"ワード"};
+let curCat = "all";
+
+/* ============ 検索語ビルダー ============ */
+const queryEl = document.getElementById("query");
+function addToQuery(term){
+  const cur = queryEl.value.trim();
+  const parts = cur ? cur.split(/\s+/) : [];
+  if(!parts.includes(term)) parts.push(term);
+  queryEl.value = parts.join(" ");
+  copyText(queryEl.value, "追加してコピーしました: " + term);
+}
+function copyText(text, msg){
+  const done = () => toast(msg || "コピーしました");
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+  } else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  document.body.removeChild(ta); done();
+}
+let toastTimer = null;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+}
+document.getElementById("copyBtn").addEventListener("click", () => {
+  if(queryEl.value.trim()) copyText(queryEl.value.trim());
+});
+document.getElementById("ytBtn").addEventListener("click", () => {
+  const q = queryEl.value.trim();
+  if(!q){ toast("検索語が空です"); return; }
+  window.open("https://www.youtube.com/results?search_query=" + encodeURIComponent(q + " 메이플"), "_blank");
+});
+document.getElementById("clearBtn").addEventListener("click", () => { queryEl.value = ""; });
+
+/* ============ 描画 ============ */
+const catsEl = document.getElementById("cats");
+CATS.forEach(([id, label]) => {
+  const b = document.createElement("button");
+  b.className = "cat" + (id === curCat ? " on" : "");
+  b.textContent = label;
+  b.addEventListener("click", () => {
+    curCat = id;
+    document.querySelectorAll(".cat").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    render();
+  });
+  catsEl.appendChild(b);
+});
+
+function chipEl(term, cls){
+  const c = document.createElement("button");
+  c.className = "chip" + (cls ? " " + cls : "");
+  c.textContent = term;
+  c.title = "タップで検索語に追加&コピー";
+  c.addEventListener("click", () => {
+    addToQuery(term);
+    c.classList.add("flash");
+    setTimeout(() => c.classList.remove("flash"), 400);
+  });
+  return c;
+}
+
+function render(){
+  const qn = norm(document.getElementById("q").value.trim());
+  const items = DATA.filter(d =>
+    (curCat === "all" || d.cat === curCat) &&
+    (!qn || d._keys.some(k => k.includes(qn)))
+  );
+  const box = document.getElementById("results");
+  box.innerHTML = "";
+  document.getElementById("count").textContent = items.length + "件";
+  items.forEach(d => {
+    const card = document.createElement("div");
+    card.className = "card";
+    const top = document.createElement("div"); top.className = "top";
+    const h = document.createElement("h3"); h.textContent = d.jp;
+    const tag = document.createElement("span"); tag.className = "cattag"; tag.textContent = CATLABEL[d.cat];
+    top.appendChild(h); top.appendChild(tag); card.appendChild(top);
+    if(d.al && d.al.length){
+      const a = document.createElement("div"); a.className = "alias";
+      a.textContent = "別名: " + d.al.join(" / ");
+      card.appendChild(a);
+    }
+    const chips = document.createElement("div"); chips.className = "chips";
+    (d.kr||[]).forEach((t, i) => chips.appendChild(chipEl(t, i === 0 ? "best" : "")));
+    if(d.official && d.official !== (d.kr||[])[0] && !d.official.startsWith("(")){
+      chips.appendChild(chipEl(d.official, "official"));
+    }
+    card.appendChild(chips);
+    if(d.diffs){
+      const row = document.createElement("div"); row.className = "diffrow";
+      const lab = document.createElement("span"); lab.className = "dlab"; lab.textContent = "難易度:";
+      row.appendChild(lab);
+      Object.entries(d.diffs).forEach(([k, v]) => {
+        const b = document.createElement("button");
+        b.className = "dchip"; b.textContent = k + "▸" + v;
+        b.title = "タップで検索語に追加&コピー";
+        b.addEventListener("click", () => addToQuery(v));
+        row.appendChild(b);
+      });
+      card.appendChild(row);
+    }
+    if(d.note){
+      const n = document.createElement("div");
+      n.className = "note" + (d.warn ? " warn" : "");
+      n.textContent = d.note;
+      card.appendChild(n);
+    }
+    box.appendChild(card);
+  });
+}
+let timer = null;
+document.getElementById("q").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(render, 120); });
+render();
+</script>
+</body>
+</html>
