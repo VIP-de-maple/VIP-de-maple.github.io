@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アストラ補助武器 完成日計算機</title>
+<style>
+  :root{
+    --bg:#14101f;
+    --panel:#1d1830;
+    --panel2:#241d3a;
+    --line:#332a4d;
+    --cyan:#59e3d8;
+    --cyan-dim:rgba(89,227,216,.14);
+    --gold:#f2c14e;
+    --gold-dim:rgba(242,193,78,.14);
+    --violet:#b28bf0;
+    --txt:#e8e4f5;
+    --muted:#9a92b5;
+    --warn:#ff8585;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;
+    --jp:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{color-scheme:dark}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(1000px 500px at 85% -10%, rgba(89,227,216,.06), transparent 60%),
+      radial-gradient(800px 420px at 0% 110%, rgba(140,90,220,.08), transparent 60%);
+    color:var(--txt);
+    font-family:var(--jp);
+    font-size:14px;
+    line-height:1.65;
+    padding:28px 20px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+  .backhome{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 14px;margin-bottom:18px}
+  .backhome:hover{color:var(--cyan);border-color:rgba(89,227,216,.45)}
+
+  header{margin-bottom:22px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .hexmark{width:52px;height:58px;flex:none}
+  h1{font-size:22px;font-weight:800;letter-spacing:.06em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px;max-width:680px}
+
+  .notice{background:var(--gold-dim);border:1px solid rgba(242,193,78,.35);border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:20px}
+  .notice b{color:var(--gold)}
+
+  .grid{display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px;margin-bottom:16px}
+  .eyebrow{display:flex;align-items:center;gap:8px;font-size:11.5px;letter-spacing:.22em;color:var(--cyan);font-weight:700;margin-bottom:12px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .hexglyph{width:11px;height:12px;flex:none}
+
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+  .field input,.field select{
+    width:100%;background:#120e1d;border:1px solid var(--line);color:var(--txt);
+    border-radius:7px;padding:7px 9px;font-size:13.5px;font-family:var(--mono);
+  }
+  .field select{font-family:var(--jp)}
+  .field input:focus,.field select:focus{outline:2px solid var(--cyan);outline-offset:0;border-color:transparent}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .hint{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5}
+
+  /* ボス行 */
+  .bossrow{display:grid;grid-template-columns:22px 1fr 130px 74px 70px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .bossrow:last-child{border-bottom:0}
+  .bossrow .nm{font-size:13px}
+  .bossrow .nm .b{font-size:10px;color:var(--violet);margin-left:4px}
+  .bossrow select,.bossrow input{background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:5px 6px;font-size:12px;width:100%}
+  .bossrow .gain{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+  .bossrow .gain b{color:var(--cyan)}
+  input[type=checkbox]{accent-color:var(--cyan);width:15px;height:15px}
+  .colhead{display:grid;grid-template-columns:22px 1fr 130px 74px 70px;gap:8px;font-size:10.5px;color:var(--muted);padding-bottom:4px}
+
+  /* 結果 */
+  .result-sticky{position:sticky;top:14px}
+  .bigdate{background:linear-gradient(180deg,var(--gold-dim),transparent);border:1px solid rgba(242,193,78,.4);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .bigdate .lab{font-size:11.5px;color:var(--muted);letter-spacing:.08em}
+  .bigdate .date{font-family:var(--mono);font-size:27px;font-weight:700;color:var(--gold);line-height:1.3}
+  .bigdate .note{font-size:12px;color:var(--muted)}
+  .stageline{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.07);gap:8px}
+  .stageline:last-child{border-bottom:0}
+  .stageline .nm{font-size:13px}
+  .stageline .nm .st{font-size:10.5px;color:var(--gold);letter-spacing:.1em;margin-right:6px}
+  .stageline .val{font-family:var(--mono);font-size:12.5px;color:var(--txt);text-align:right}
+  .stageline .val small{display:block;color:var(--muted);font-size:10.5px}
+  .sumbox{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.7}
+  .sumbox code{font-family:var(--mono);color:var(--txt)}
+  .warnbox{background:rgba(255,133,133,.08);border:1px solid rgba(255,133,133,.35);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--warn);margin-top:10px}
+  .okbadge{color:var(--cyan)}
+
+  details{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-top:14px}
+  summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:13px;list-style:none;display:flex;align-items:center;gap:8px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"＋";margin-left:auto;color:var(--muted)}
+  details[open] summary::after{content:"−"}
+  details .inner{padding:0 16px 14px;font-size:12.5px}
+  details .inner p{margin:7px 0}
+  details .inner table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+  details .inner th,details .inner td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.06);text-align:right;font-family:var(--mono)}
+  details .inner th{color:var(--muted);font-family:var(--jp);text-align:left}
+  details .inner td:first-child,details .inner th:first-child{text-align:left;font-family:var(--jp)}
+  .costgrid{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px 10px;align-items:center;font-size:12px;margin-top:8px}
+  .costgrid input{background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:4px 8px;font-size:12px;font-family:var(--mono);width:100%}
+  .costgrid .cg-h{color:var(--muted);font-size:10.5px}
+
+  .footnote{margin-top:26px;font-size:11.5px;color:var(--muted);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="backhome" href="../">⬢ VIP de Maple — ツール一覧へ</a>
+
+<header>
+  <svg class="hexmark" viewBox="0 0 52 58" aria-hidden="true">
+    <polygon points="26,2 50,15 50,43 26,56 2,43 2,15" fill="none" stroke="#59e3d8" stroke-width="2.5"/>
+    <polygon points="26,14 40,22 40,36 26,44 12,36 12,22" fill="rgba(89,227,216,.12)" stroke="#f2c14e" stroke-width="1.5"/>
+  </svg>
+  <div>
+    <h1>アストラ補助武器 完成日計算機</h1>
+    <div class="sub">デイリークエストの到達地域と、毎週クリアできるボスを選ぶと、アストラ補助武器(아스트라)の1次〜3次(最終)成長がいつ完了するかを予測します。JMSは2026/7/23実装予定。</div>
+  </div>
+</header>
+
+<div class="notice">
+  <b>注意:</b> 数値は KMS(韓国版・2026年1月実装)の攻略情報ベースです。JMS実装時に変わる可能性があります。段階コスト(3,000/600 → 3,000/600 → 4,000/800)は複数ソース一致ですが、<b>ボス別ドロップ量の一部と「高難度ボスが欠片も直接落とす」情報は(未確認)</b>です — 後者は右下のチェックで含める/外すを切り替えられます。前提条件: Lv265以上・ジェネシス武器解放クエスト完了。
+</div>
+
+<div class="grid">
+
+<div>
+  <!-- 開始と現状 -->
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>開始日と現在の状況</div>
+    <div class="row3">
+      <div class="field"><label for="startDate">計算開始日</label><input id="startDate" type="date" value="2026-07-23"></div>
+      <div class="field"><label for="stageDone">完了済みの段階</label>
+        <select id="stageDone">
+          <option value="0" selected>未着手(これから)</option>
+          <option value="1">1次成長まで完了</option>
+          <option value="2">2次成長まで完了</option>
+        </select></div>
+      <div class="field"><label>&nbsp;</label><button id="todayBtn" style="width:100%;background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:7px;cursor:pointer;font-family:var(--jp);font-size:12.5px">今日にする</button></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="heldShard">保有中: エリオンの欠片</label><input id="heldShard" type="number" value="0" min="0"></div>
+      <div class="field"><label for="heldTrace">保有中: 激戦の痕跡</label><input id="heldTrace" type="number" value="0" min="0"></div>
+    </div>
+  </div>
+
+  <!-- デイリー -->
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>デイリークエスト(エリオンの欠片)</div>
+    <div class="row2">
+      <div class="field"><label for="region">最高到達地域(1日の獲得量)</label>
+        <select id="region">
+          <option value="1">セルニウム(1個/日)</option>
+          <option value="3">ホテルアルクス(3個/日)</option>
+          <option value="6">オーディウム(6個/日)</option>
+          <option value="10">桃源郷(10個/日)</option>
+          <option value="15">アルテリア(15個/日)</option>
+          <option value="25" selected>カルシオン(25個/日)</option>
+          <option value="45">タラハート(45個/日)</option>
+          <option value="65">ギアードラック(65個/日・未確認)</option>
+        </select></div>
+      <div class="field"><label for="daysPerWeek">デイリーをやる日数/週</label>
+        <select id="daysPerWeek">
+          <option value="7" selected>毎日(7日)</option>
+          <option value="6">6日</option>
+          <option value="5">5日</option>
+          <option value="4">4日</option>
+          <option value="3">3日</option>
+          <option value="2">2日</option>
+          <option value="1">1日</option>
+        </select></div>
+    </div>
+    <div class="hint">欠片は「その時点で到達している最高地域のデイリー」で入手。地域が進むと1日の獲得量が増えます(途中で進む予定ならとりあえず現在地で・完成が早まる方向にズレます)。</div>
+  </div>
+
+  <!-- 週ボス -->
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>毎週クリアするボス(激戦の痕跡)</div>
+    <div class="colhead"><span></span><span>ボス</span><span>難易度</span><span>人数</span><span style="text-align:right">週あたり</span></div>
+    <div id="bossList"></div>
+    <div class="field" style="margin-top:10px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--txt);font-size:12.5px">
+        <input type="checkbox" id="incBossShard" checked>高難度ボスの「エリオンの欠片」直接ドロップも含める <span style="color:var(--muted)">(未確認情報・KMSの計算機はこの挙動)</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- 上級設定 -->
+  <details>
+    <summary><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#9a92b5"/></svg>上級設定: 段階コストを手動調整(JMSで数値が違った場合用)</summary>
+    <div class="inner">
+      <div class="costgrid">
+        <span></span><span class="cg-h">エリオンの欠片</span><span class="cg-h">激戦の痕跡</span>
+        <span>1次成長</span><input id="c1s" type="number" value="3000" min="0"><input id="c1t" type="number" value="600" min="0">
+        <span>2次成長</span><input id="c2s" type="number" value="3000" min="0"><input id="c2t" type="number" value="600" min="0">
+        <span>3次成長</span><input id="c3s" type="number" value="4000" min="0"><input id="c3t" type="number" value="800" min="0">
+      </div>
+    </div>
+  </details>
+</div>
+
+<!-- ========== 結果 ========== -->
+<div class="result-sticky">
+  <div class="bigdate">
+    <div class="lab">最終(3次)成長 完成予定</div>
+    <div class="date" id="finalDate">—</div>
+    <div class="note" id="finalNote"></div>
+  </div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>段階別の予定</div>
+    <div id="stages"></div>
+    <div class="sumbox" id="summary"></div>
+    <div id="warns"></div>
+  </div>
+  <details>
+    <summary><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#9a92b5"/></svg>仕様メモ(KMS調査より)</summary>
+    <div class="inner">
+      <p><b style="color:var(--gold)">アストラとは</b> — 補助武器スロットの新上位装備。3段階の成長でスターフォース上限が 15→20→30星 に拡張。既存補助武器の潜在能力は「継承」(10億メソ)で引き継ぎ、職業専用の100%成功スクロール(5億メソ×5回など)でさらに強化。</p>
+      <p><b style="color:var(--gold)">注意点</b> — 財貨はすべて交換不可(サブキャラと融通不可)。激戦の痕跡の保有上限は1,000個。継承は3次成長完了が実質前提という報告あり(未確認)。ユピテルの数値と「人数割りの正確な仕様」も未確認。</p>
+      <p><b style="color:var(--gold)">JMS</b> — 2026/7/23実装予定(ユピテルは8/27予定のため、それまでは選択しても実際には周回不可)。</p>
+    </div>
+  </details>
+</div>
+
+</div>
+
+<div class="footnote">
+  計算モデル: 欠片=デイリー日数×地域値(+設定次第でボス直接ドロップ)、痕跡=週ボス合計(人数割り・切り捨て)を日単位で積算し、各段階の必要量に到達した日を完成日とします。週ボスは7日ごとにまとめて加算(初日を含む)。実際のリセット曜日・端数処理により数日前後します。数値はKMS基準(2026年7月時点の調査)・非公式ファンツール。ⓒ NEXON / NEXON Korea
+</div>
+
+</div>
+
+<script>
+"use strict";
+/* ボスデータ: trace=激戦の痕跡, shard=エリオンの欠片直接ドロップ(未確認情報), maxP=最大人数 */
+const BOSSES = [
+  {id:"seren", name:"選ばれしセレン", maxP:6, diffs:{"ノーマル":{t:6,s:0},"ハード":{t:15,s:0},"エクストリーム":{t:180,s:30}}},
+  {id:"kalos", name:"監視者カロス", maxP:6, diffs:{"イージー":{t:6,s:0},"ノーマル":{t:30,s:0},"カオス":{t:100,s:0},"エクストリーム":{t:500,s:180}}},
+  {id:"kaling", name:"カリング", maxP:6, diffs:{"イージー":{t:20,s:0},"ノーマル":{t:80,s:0},"ハード":{t:240,s:60},"エクストリーム":{t:1440,s:480}}},
+  {id:"limbo", name:"リンボ", maxP:6, diffs:{"ノーマル":{t:80,s:0},"ハード":{t:240,s:60}}},
+  {id:"baldrix", name:"バルドリックス", maxP:6, diffs:{"ノーマル":{t:80,s:0},"ハード":{t:240,s:120}}},
+  {id:"adv", name:"最初の対敵者", maxP:3, diffs:{"イージー":{t:10,s:0},"ノーマル":{t:40,s:0},"ハード":{t:180,s:30},"エクストリーム":{t:540,s:240}}},
+  {id:"kyosei", name:"燦爛たる凶星", maxP:3, diffs:{"ノーマル":{t:60,s:0},"ハード":{t:240,s:90}}},
+  {id:"jupiter", name:"ユピテル", badge:"JMS 8/27〜・数値未確認", maxP:6, diffs:{"ノーマル":{t:210,s:0},"ハード":{t:630,s:0}}},
+];
+const DEFAULT_ON = {limbo:"ハード", baldrix:"ハード", kyosei:"ノーマル"};
+
+/* ---------- UI構築 ---------- */
+const bossListEl = document.getElementById("bossList");
+BOSSES.forEach(b=>{
+  const row = document.createElement("div");
+  row.className = "bossrow";
+  const diffOpts = Object.keys(b.diffs).map(d=>{
+    const sel = DEFAULT_ON[b.id]===d ? " selected" : "";
+    return `<option value="${d}"${sel}>${d}</option>`;
+  }).join("");
+  const pOpts = Array.from({length:b.maxP},(_,i)=>`<option value="${i+1}">${i+1}人</option>`).join("");
+  row.innerHTML = `
+    <input type="checkbox" id="on_${b.id}" ${DEFAULT_ON[b.id]?"checked":""} aria-label="${b.name}を毎週クリアする">
+    <span class="nm">${b.name}${b.badge?`<span class="b">${b.badge}</span>`:""}</span>
+    <select id="diff_${b.id}" aria-label="${b.name}の難易度">${diffOpts}</select>
+    <select id="p_${b.id}" aria-label="${b.name}の入場人数">${pOpts}</select>
+    <span class="gain" id="gain_${b.id}">—</span>`;
+  bossListEl.appendChild(row);
+});
+
+/* ---------- 計算 ---------- */
+const $ = id => document.getElementById(id);
+const num = id => { const v = parseFloat($(id).value); return isFinite(v) ? Math.max(0, v) : 0; };
+const TRACE_CAP = 1000;
+const WD = ["日","月","火","水","木","金","土"];
+const fmtDate = d => `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;
+
+function readBosses(){
+  const inc = $("incBossShard").checked;
+  let wTrace = 0, wShard = 0;
+  BOSSES.forEach(b=>{
+    const on = $("on_"+b.id).checked;
+    const diff = $("diff_"+b.id).value;
+    const p = parseInt($("p_"+b.id).value, 10) || 1;
+    const d = b.diffs[diff] || {t:0,s:0};
+    const gT = on ? Math.floor(d.t / p) : 0;
+    const gS = (on && inc) ? Math.floor(d.s / p) : 0;
+    $("gain_"+b.id).textContent = on ? (gS>0 ? `${gT} +欠${gS}` : `${gT}`) : "—";
+    if(on){ wTrace += gT; wShard += gS; }
+  });
+  return {wTrace, wShard};
+}
+
+function calc(){
+  const {wTrace, wShard} = readBosses();
+  const dailyShard = num("region");
+  const daysPerWeek = parseInt($("daysPerWeek").value, 10);
+  const stageDone = parseInt($("stageDone").value, 10);
+  const costs = [
+    {name:"1次成長", s:num("c1s"), t:num("c1t")},
+    {name:"2次成長", s:num("c2s"), t:num("c2t")},
+    {name:"3次成長(最終)", s:num("c3s"), t:num("c3t")},
+  ].slice(stageDone);
+  const start = $("startDate").value ? new Date($("startDate").value + "T00:00:00") : new Date();
+
+  let shard = num("heldShard"), trace = num("heldTrace");
+  const done = [];
+  let idx = 0;
+  const MAX_DAYS = 3650;
+  for(let day = 0; day <= MAX_DAYS && idx < costs.length; day++){
+    if(day % 7 === 0){ trace = Math.min(TRACE_CAP + 0, trace + wTrace); shard += wShard; }
+    if(day % 7 < daysPerWeek) shard += dailyShard;
+    while(idx < costs.length && shard >= costs[idx].s && trace >= costs[idx].t){
+      shard -= costs[idx].s; trace -= costs[idx].t;
+      done.push({name:costs[idx].name, day});
+      idx++;
+    }
+  }
+
+  /* 表示 */
+  const stagesEl = $("stages");
+  stagesEl.innerHTML = "";
+  const doneNames = ["1次成長","2次成長","3次成長(最終)"].slice(0, stageDone);
+  doneNames.forEach(n=>{
+    stagesEl.innerHTML += `<div class="stageline"><span class="nm"><span class="st">完了済</span>${n}</span><span class="val okbadge">✓</span></div>`;
+  });
+  done.forEach(d=>{
+    const dt = new Date(start); dt.setDate(dt.getDate() + d.day);
+    const wk = (d.day/7).toFixed(1);
+    stagesEl.innerHTML += `<div class="stageline"><span class="nm"><span class="st">予定</span>${d.name}</span><span class="val">${fmtDate(dt)}<small>${d.day}日後(約${wk}週)</small></span></div>`;
+  });
+  for(let i = done.length; i < costs.length; i++){
+    stagesEl.innerHTML += `<div class="stageline"><span class="nm"><span class="st" style="color:var(--warn)">未達</span>${costs[i].name}</span><span class="val" style="color:var(--warn)">10年以内に完成しません</span></div>`;
+  }
+
+  const finalEl = $("finalDate"), finalNote = $("finalNote");
+  if(costs.length === 0){
+    finalEl.textContent = "完成済み 🎉"; finalNote.textContent = "";
+  } else if(done.length === costs.length){
+    const last = done[done.length-1];
+    const dt = new Date(start); dt.setDate(dt.getDate() + last.day);
+    finalEl.textContent = fmtDate(dt);
+    const months = (last.day/30.4).toFixed(1);
+    finalNote.textContent = `開始から ${last.day}日(約${(last.day/7).toFixed(1)}週・${months}ヶ月)`;
+  } else {
+    finalEl.textContent = "完成不可";
+    finalNote.textContent = "この設定では財貨が足りません(獲得ペース0の財貨があります)";
+  }
+
+  /* 週間サマリーとボトルネック */
+  const wShardTotal = dailyShard * daysPerWeek + wShard;
+  const needS = costs.reduce((a,c)=>a+c.s,0) - num("heldShard");
+  const needT = costs.reduce((a,c)=>a+c.t,0) - num("heldTrace");
+  const wkS = wShardTotal > 0 ? Math.max(0,needS)/wShardTotal : Infinity;
+  const wkT = wTrace > 0 ? Math.max(0,needT)/wTrace : Infinity;
+  let bottleneck = "";
+  if(costs.length && isFinite(wkS) && isFinite(wkT)){
+    bottleneck = wkS > wkT
+      ? `ボトルネックは<b style="color:var(--gold)">エリオンの欠片</b>(単独換算 約${wkS.toFixed(1)}週 > 痕跡 約${wkT.toFixed(1)}週)。デイリーの継続率と到達地域が完成日を決めます。`
+      : `ボトルネックは<b style="color:var(--gold)">激戦の痕跡</b>(単独換算 約${wkT.toFixed(1)}週 > 欠片 約${wkS.toFixed(1)}週)。ボスの難易度を上げる/人数を減らすと早まります。`;
+  }
+  $("summary").innerHTML =
+    `週間獲得見込み: 欠片 <code>${wShardTotal}</code>/週(デイリー${dailyShard}×${daysPerWeek}日${wShard?` + ボス${wShard}`:""})　/　痕跡 <code>${wTrace}</code>/週<br>${bottleneck}`;
+
+  const warns = [];
+  if(wTrace > TRACE_CAP) warns.push(`痕跡の週間獲得(${wTrace})が保有上限1,000を超えています。上限で頭打ちになる分は無駄になる可能性があります(計算にも上限を適用済み)。`);
+  if($("on_jupiter").checked) warns.push("ユピテルの数値は未確認です(JMS実装も8/27予定)。");
+  $("warns").innerHTML = warns.map(w=>`<div class="warnbox">⚠ ${w}</div>`).join("");
+}
+
+/* ---------- イベント ---------- */
+$("todayBtn").addEventListener("click", ()=>{
+  const t = new Date();
+  $("startDate").value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;
+  calc();
+});
+let timer = null;
+document.querySelectorAll("input,select").forEach(el=>{
+  el.addEventListener("input", ()=>{ clearTimeout(timer); timer = setTimeout(calc, 100); });
+  el.addEventListener("change", ()=>{ clearTimeout(timer); timer = setTimeout(calc, 50); });
+});
+calc();
+</script>
+</body>
+</html>
