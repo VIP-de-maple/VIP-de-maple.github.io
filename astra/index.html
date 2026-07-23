@@ -66,7 +66,7 @@
   .hint{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5}
 
   /* ボス行 */
-  .bossrow{display:grid;grid-template-columns:22px 1fr 130px 74px 70px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .bossrow{display:grid;grid-template-columns:22px 1fr 116px 62px 52px 64px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
   .bossrow:last-child{border-bottom:0}
   .bossrow .nm{font-size:13px}
   .bossrow .nm .b{font-size:10px;color:var(--violet);margin-left:4px}
@@ -74,7 +74,7 @@
   .bossrow .gain{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
   .bossrow .gain b{color:var(--cyan)}
   input[type=checkbox]{accent-color:var(--cyan);width:15px;height:15px}
-  .colhead{display:grid;grid-template-columns:22px 1fr 130px 74px 70px;gap:8px;font-size:10.5px;color:var(--muted);padding-bottom:4px}
+  .colhead{display:grid;grid-template-columns:22px 1fr 116px 62px 52px 64px;gap:8px;font-size:10.5px;color:var(--muted);padding-bottom:4px}
 
   /* 結果 */
   .result-sticky{position:sticky;top:14px}
@@ -185,13 +185,14 @@
   <!-- 週ボス -->
   <div class="card">
     <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>毎週クリアするボス(激戦の痕跡)</div>
-    <div class="colhead"><span></span><span>ボス</span><span>難易度</span><span>人数</span><span style="text-align:right">週あたり</span></div>
+    <div class="colhead"><span></span><span>ボス</span><span>難易度</span><span>人数</span><span>回数</span><span style="text-align:right">週あたり</span></div>
     <div id="bossList"></div>
     <div class="field" style="margin-top:10px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--txt);font-size:12.5px">
         <input type="checkbox" id="incBossShard" checked>高難度ボスの「エリオンの欠片」直接ドロップも含める <span style="color:var(--muted)">(未確認情報・KMSの計算機はこの挙動)</span>
       </label>
     </div>
+    <div class="hint" style="margin-top:8px">「回数」は週に何回そのボスを討伐するか(通常1、週ボスリセットで倒す分を足す)。等級ごとの回数上限は確認しないので入力どおり計算します。</div>
   </div>
 
   <!-- 上級設定 -->
@@ -227,6 +228,7 @@
       <p><b style="color:var(--gold)">アストラとは</b> — 補助武器スロットの新上位装備。3段階の成長でスターフォース上限が 15→20→30星 に拡張。既存補助武器の潜在能力は「継承」(10億メソ)で引き継ぎ、職業専用の100%成功スクロール(5億メソ×5回など)でさらに強化。</p>
       <p><b style="color:var(--gold)">注意点</b> — 財貨はすべて交換不可(サブキャラと融通不可)。激戦の痕跡の保有上限は1,000個。継承は3次成長完了が実質前提という報告あり(未確認)。ユピテルの数値と「人数割りの正確な仕様」も未確認。</p>
       <p><b style="color:var(--gold)">JMS</b> — 2026/7/23実装予定(ユピテルは8/27予定のため、それまでは選択しても実際には周回不可)。</p>
+      <p><b style="color:var(--gold)">回数(週ボスリセット)</b> — 各ボスの「回数」欄で、週に何回そのボスを討伐するか指定できます(通常1)。VIP特典等の週ボスリセットで倒す分は、そのボスの回数を増やして反映してください。等級ごとの回数上限は確認しないので入力どおり計算します。</p>
     </div>
   </details>
 </div>
@@ -269,6 +271,7 @@ BOSSES.forEach(b=>{
     <span class="nm">${b.name}${b.badge?`<span class="b">${b.badge}</span>`:""}</span>
     <select id="diff_${b.id}" aria-label="${b.name}の難易度">${diffOpts}</select>
     <select id="p_${b.id}" aria-label="${b.name}の入場人数">${pOpts}</select>
+    <input id="c_${b.id}" type="number" min="0" max="20" value="1" style="text-align:center" aria-label="${b.name}の週間討伐回数">
     <span class="gain" id="gain_${b.id}">—</span>`;
   bossListEl.appendChild(row);
 });
@@ -287,11 +290,12 @@ function readBosses(){
     const on = $("on_"+b.id).checked;
     const diff = $("diff_"+b.id).value;
     const p = parseInt($("p_"+b.id).value, 10) || 1;
+    const cnt = Math.max(0, Math.floor(num("c_"+b.id)));
     const d = b.diffs[diff] || {t:0,s:0};
-    const gT = on ? Math.floor(d.t / p) : 0;
+    const gT = on ? Math.floor(d.t / p) : 0;         // 1回あたり(人数割り)
     const gS = (on && inc) ? Math.floor(d.s / p) : 0;
-    $("gain_"+b.id).textContent = on ? (gS>0 ? `${gT} +欠${gS}` : `${gT}`) : "—";
-    if(on){ wTrace += gT; wShard += gS; }
+    $("gain_"+b.id).textContent = on ? (gS>0 ? `${gT*cnt} +欠${gS*cnt}` : `${gT*cnt}`) : "—";
+    if(on){ wTrace += gT * cnt; wShard += gS * cnt; }
   });
   return {wTrace, wShard};
 }
