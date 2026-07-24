@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>サブキャラ装備シミュ ― ポンポン組んで戦闘力見積もり</title>
+<style>
+  :root{
+    --bg:#14101f; --panel:#1d1830; --panel2:#241d3a; --line:#332a4d;
+    --cyan:#59e3d8; --cyan-dim:rgba(89,227,216,.14);
+    --gold:#f2c14e; --gold-dim:rgba(242,193,78,.14);
+    --violet:#b28bf0;
+    --txt:#e8e4f5; --muted:#9a92b5; --warn:#ff8585;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;
+    --jp:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{color-scheme:dark}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(1000px 500px at 85% -10%, rgba(89,227,216,.06), transparent 60%),
+      radial-gradient(800px 420px at 0% 110%, rgba(140,90,220,.08), transparent 60%);
+    color:var(--txt); font-family:var(--jp); font-size:14px; line-height:1.6; padding:26px 18px 90px;
+  }
+  .wrap{max-width:1140px;margin:0 auto}
+  .backhome{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 14px;margin-bottom:16px}
+  .backhome:hover{color:var(--cyan);border-color:rgba(89,227,216,.45)}
+  header{margin-bottom:18px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .hexmark{width:50px;height:56px;flex:none}
+  h1{font-size:21px;font-weight:800;letter-spacing:.04em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px;max-width:720px}
+  .notice{background:var(--gold-dim);border:1px solid rgba(242,193,78,.35);border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:18px}
+  .notice b{color:var(--gold)}
+
+  .grid{display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start}
+  @media(max-width:960px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;margin-bottom:14px}
+  .eyebrow{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.2em;color:var(--cyan);font-weight:700;margin-bottom:11px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .hexglyph{width:11px;height:12px;flex:none}
+  .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px}
+  .field input,.field select{width:100%;background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:6px 8px;font-size:13px;font-family:var(--jp)}
+  .field input{font-family:var(--mono)}
+  .field input:focus,.field select:focus{outline:2px solid var(--cyan);border-color:transparent}
+  .r3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+  .gearhead,.gearrow{display:grid;grid-template-columns:92px 1fr 70px 64px 96px 24px;gap:6px;align-items:center}
+  .gearhead{font-size:10px;color:var(--muted);padding-bottom:4px}
+  .gearrow{padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .gearrow:last-child{border-bottom:0}
+  .gearrow select,.gearrow input{background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:5px 5px;font-size:11.5px;width:100%;font-family:var(--jp)}
+  .gearrow input{font-family:var(--mono);text-align:center}
+  .gearrow .setinfo{grid-column:1/7;font-size:10.5px;color:var(--violet);font-family:var(--mono);padding:0 0 3px 2px;margin-top:-2px}
+  .gearrow .rm{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:6px;cursor:pointer;font-size:13px;padding:3px 0}
+  .gearrow .rm:hover{color:var(--warn);border-color:rgba(255,133,133,.4)}
+  .addbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .addbtns button{background:var(--cyan-dim);border:1px solid rgba(89,227,216,.35);color:var(--cyan);border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:var(--jp)}
+  .addbtns button:hover{background:rgba(89,227,216,.22)}
+
+  .sticky{position:sticky;top:12px}
+  .cpcard{background:linear-gradient(180deg,var(--gold-dim),transparent);border:1px solid rgba(242,193,78,.4);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .cpcard .lab{font-size:11px;color:var(--muted)}
+  .cpcard .big{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--gold);line-height:1.2}
+  .cpcard .rng{font-size:11px;color:var(--muted);font-family:var(--mono)}
+  .statcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 15px;margin-bottom:12px}
+  .statline{display:flex;justify-content:space-between;padding:3px 0;font-size:12.5px;border-bottom:1px dashed rgba(255,255,255,.05)}
+  .statline:last-child{border-bottom:0}
+  .statline .k{color:var(--muted)}
+  .statline .v{font-family:var(--mono);color:var(--txt)}
+  .boss{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .boss:last-child{border-bottom:0}
+  .boss .dot{width:8px;height:8px;border-radius:50%;flex:none;background:#3a3350}
+  .boss.clr .dot{background:var(--cyan)}
+  .boss .nm{flex:1}.boss:not(.clr) .nm{color:var(--muted)}
+  .boss .cp{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .warnbox{background:rgba(255,133,133,.08);border:1px solid rgba(255,133,133,.3);border-radius:8px;padding:7px 11px;font-size:11px;color:var(--warn);margin-top:9px}
+  details{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-top:12px}
+  summary{cursor:pointer;padding:11px 15px;font-weight:700;font-size:12.5px;list-style:none;display:flex;gap:8px;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"＋";margin-left:auto;color:var(--muted)}
+  details[open] summary::after{content:"−"}
+  details .inner{padding:0 15px 13px;font-size:11.5px;color:var(--muted);line-height:1.7}
+  details .inner b{color:var(--gold)}
+  .adv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+  .footnote{margin-top:22px;font-size:11px;color:var(--muted);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="backhome" href="../">⬢ VIP de Maple — ツール一覧へ</a>
+
+<header>
+  <svg class="hexmark" viewBox="0 0 52 58" aria-hidden="true">
+    <polygon points="26,2 50,15 50,43 26,56 2,43 2,15" fill="none" stroke="#59e3d8" stroke-width="2.5"/>
+    <polygon points="26,14 40,22 40,36 26,44 12,36 12,22" fill="rgba(89,227,216,.12)" stroke="#f2c14e" stroke-width="1.5"/>
+  </svg>
+  <div>
+    <h1>サブキャラ装備シミュ</h1>
+    <div class="sub">キャラのベースを3つ選んで、装備をポンポン積んでいくと「だいたいこれくらいのサブになりますよ」が出ます。セット効果は段階どおり自動計算(エテルネル3部位=3セット効果)。潜在はステ%を直接入力。</div>
+  </div>
+</header>
+
+<div class="notice">
+  <b>ざっくり見積もり用です。</b>戦闘力の式・スタフォ上昇表・セット効果(ヴェラッド含む=JMS公式ガイド確認値)は実データですが、装備の素ステ・ベース値は一部推定のため、結果は<b>±20%程度の目安</b>として見てください。ヴェラッドとゴラックスは同じアクセ4部位枠(ベルト・ペンダント・耳・指輪)で、Lv150なので30★まで星が付きます。
+</div>
+
+<div class="grid">
+
+<div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>① キャラのベース</div>
+    <div class="r3">
+      <div class="field"><label>レベル</label>
+        <select id="level">
+          <option value="260">260</option><option value="265" selected>265</option>
+          <option value="270">270</option><option value="275">275</option>
+          <option value="280">280</option><option value="285">285</option>
+        </select></div>
+      <div class="field"><label>シンボル</label>
+        <select id="symbols">
+          <option value="0">ほぼなし</option>
+          <option value="6600">アーケイン途中</option>
+          <option value="13200" selected>アーケイン完成</option>
+          <option value="20000">+オーセン途中</option>
+          <option value="28200">両方完成</option>
+        </select></div>
+      <div class="field"><label>ユニオン・リンク等</label>
+        <select id="union">
+          <option value="0">ほぼなし</option>
+          <option value="1" selected>そこそこ(〜6000)</option>
+          <option value="2">しっかり(〜8000)</option>
+          <option value="3">ガチ(9000+)</option>
+        </select></div>
+    </div>
+    <div class="hint">レベル素ステ+シンボル+ユニオン/ハイパー/HEXAのざっくり合算。細かい前提(最終ダメ%など)は下の「上級設定」で調整できます。</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>② 装備をポンポン積む</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+      <span style="font-size:11px;color:var(--gold);font-weight:700">テンプレ:</span>
+      <button class="tplbtn" data-tpl="0" style="background:var(--gold-dim);border:1px solid rgba(242,193,78,.4);color:var(--gold);border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:var(--jp)">週ボス入門</button>
+      <button class="tplbtn" data-tpl="1" style="background:var(--gold-dim);border:1px solid rgba(242,193,78,.4);color:var(--gold);border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:var(--jp)">ハードボス周回</button>
+      <button class="tplbtn" data-tpl="2" style="background:var(--gold-dim);border:1px solid rgba(242,193,78,.4);color:var(--gold);border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:var(--jp)">上位サブ</button>
+      <button class="tplbtn" data-tpl="3" style="background:var(--gold-dim);border:1px solid rgba(242,193,78,.4);color:var(--gold);border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:var(--jp)">エンドサブ</button>
+      <span style="font-size:10.5px;color:var(--muted)">← 装備+レベル・シンボル(キャラ固有)を設定。ユニオンは触りません。そこから微調整OK</span>
+    </div>
+    <div class="gearhead"><span>種類</span><span>セット/ランク</span><span>部位数</span><span>星★</span><span>潜在ステ%<br>(1部位)</span><span></span></div>
+    <div id="gearList"></div>
+    <div class="addbtns">
+      <button data-cat="防具">＋防具</button>
+      <button data-cat="アクセ">＋アクセ</button>
+      <button data-cat="武器">＋武器類(武器/補助/エンブレム)</button>
+    </div>
+    <div class="hint" style="margin-top:8px">「部位数」がそのままセット段階(下に発動中のセット効果が出ます)。<b>星はアクセにも付きます</b>(防具と同じ上昇表・16★以降は攻撃力も伸びる)。バッジ・勲章・ポケット・エンブレムは強化不可のため自動で星計算から除外。「潜在ステ%」は防具/アクセ=<b>1部位あたりの主ステ%合計</b>(例: 21)。<b>武器類</b>は武器ランク+武器★+補助★で基礎攻撃力を、潜在は武器/補助/エンブレム合計の<b>ボスダメ%/無視%/攻%</b>を直接入力(ジェネ/デスティニー解放の最終ダメ%も自動反映)。</div>
+  </div>
+
+  <details>
+    <summary><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#9a92b5"/></svg>上級設定(職・育成の前提値)</summary>
+    <div class="inner">
+      <div class="adv">
+        <div class="field"><label>最終ダメージ%(職スキル)</label><input id="advFd" type="number" value="60"></div>
+        <div class="field"><label>クリダメ%ベース(表示値)</label><input id="advCd" type="number" value="85"></div>
+        <div class="field"><label>ダメージ%ベース</label><input id="advDmg" type="number" value="30"></div>
+        <div class="field"><label>攻%ベース(リンク等)</label><input id="advAttPct" type="number" value="20"></div>
+        <div class="field"><label>防御無視%ベース(職+ハイパー)</label><input id="advIed" type="number" value="30"></div>
+        <div class="field"><label>素の攻撃力(装備以外)</label><input id="advBaseAtt" type="number" value="100"></div>
+      </div>
+      <p style="margin-top:8px">最終ダメ%は職差が大きい(40〜80%)ので、分かるなら合わせると精度が上がります。</p>
+    </div>
+  </details>
+</div>
+
+<div class="sticky">
+  <div class="cpcard">
+    <div class="lab">この構成の 推定戦闘力</div>
+    <div class="big" id="cpBig">—</div>
+    <div class="rng" id="cpRng"></div>
+  </div>
+  <div class="statcard">
+    <div class="statline"><span class="k">推定 主ステ</span><span class="v" id="stMain">—</span></div>
+    <div class="statline"><span class="k">推定 攻撃力/魔力</span><span class="v" id="stAtt">—</span></div>
+    <div class="statline"><span class="k">ボスダメ 合計</span><span class="v" id="stBoss">—</span></div>
+    <div class="statline"><span class="k">防御無視 合計</span><span class="v" id="stIed">—</span></div>
+    <div class="statline"><span class="k">クリダメ(表示値)</span><span class="v" id="stCd">—</span></div>
+  </div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>入れるボス(目安)</div>
+    <div id="bossList"></div>
+    <div id="warnBox"></div>
+  </div>
+  <details>
+    <summary><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#9a92b5"/></svg>データの根拠</summary>
+    <div class="inner">
+      <p><b>スターフォース</b>はkiiten.comの実表を実装(アクセ=防具と同一テーブル)。1〜15★で主ステ+40、16〜22★は装備Lv別(Lv150:+11/★、Lv200:+15/★、Lv250:+17/★)、<b>16★以降は攻撃力も上昇</b>(Lv150の22★で攻+85、30★で攻+270)。主ステは22★で頭打ちし23★以降は攻撃力側が伸びます。星上限は装備Lv138以上=30★、Lv128〜137=20★(ボスアクセの一部はここ)。</p>
+      <p><b>セット効果</b>は段階テーブル(加算式)。エテルネル3セット=全ステ+50/攻+80/ボスダメ+20%、7セット=全ステ+100/攻+240/ボスダメ+60%/防無+20%。<b>ヴェラッド最上級はJMS公式ガイド確認値</b>: 2セット全ステ+20、3セット攻魔+35、4セットボスダメ+30%/防無+30%(ゴラックス スペリオルと同水準・同スロット)。</p>
+      <p><b>武器の最終ダメ</b>はジェネシス以上で「破壊のヤルダバオト」の<b>+10%固定</b>(解放段階で変動なし・2次超越でも据え置き)。デスティニー2次超越はボスダメ+15%/防無+15%が追加。武器の基本ボスダメ30%・防無(アーケイン以上20%)も自動反映。</p>
+      <p><b>書(呪文書)</b>はフル埋め想定の目安: 武器8回(70%書=攻+40/30%=+56/15%=+72)、防具7回(70%=主ステ+28/部位)、アクセ5回(70%=+15/部位)。<b>転生の炎(追加オプション)</b>は弱/中/強の目安(防具・アクセ=主ステ+20/40/70、武器=攻+50/100/175)。どちらも回数・数値は装備により前後します。</p>
+      <p><b>防具の定番進行</b>: ルートアビスだけ上下分離なので「アビス3(帽・上・下)+アブソ/アーケイン4(肩・手袋・靴・マント)」が共存できる。アビス3セット=<b>攻魔+50</b>(JMS公式・Lv150装備なのに破格)が定番の理由。4セット(ボスダメ30%)は武器ファフニールが必要なのでサブ構成では通常未発動。進行: アビス3+アブソ4 → アビス3+アーケ4 → エテ3+アーケ4 → エテ7。</p>
+      <p><b>防具の素ステ(1部位平均)</b>: アーケイン+40/エテルネル+50=ゲーム内実測値。アビス+33(帽40/上30/下30)・アブソ+20(手袋20/マント15/肩14)=部位別実値の平均。<b>戦闘力式</b>は実データ3例で誤差1未満を確認済み。残る推定はベース値(ユニオン等)とアクセ素ステの一部で、絶対値は±20%目安。</p>
+    </div>
+  </details>
+</div>
+
+</div>
+
+<div class="footnote">非公式ファンツール(2026年7月・KMS/JMS調査ベース)。ⓒ NEXON / NEXON Korea</div>
+
+<script>
+"use strict";
+/* ===== スターフォース(kiiten.com実表・アクセ=防具と同一テーブル) ===== */
+const SF_PERSTAR = {130:7,140:9,150:11,160:13,200:15,250:17}; // 16〜22★の主ステ/星
+const SF_P1 = [0,2,4,6,8,10,13,16,19,22,25,28,31,34,37,40];   // 1〜15★累積主ステ
+const SF_ATK_ARMOR = { // 防具・アクセの攻撃力累積(16★→30★)
+  130:[7,15,24,34,45],
+  140:[8,17,27,38,50,63,78,95,114,135,157,180,204,229,255],
+  150:[9,19,30,42,55,69,85,103,123,145,168,192,217,243,270],
+  160:[10,21,33,46,60,75,92,111,132,155,179,204,230,257,285],
+  200:[12,25,39,54,70,87,106,127,150,175,201,228,256,285,315],
+  250:[14,29,45,62,80,99,120,143,168,195,223,252,282,313,345],
+};
+const SF_ATK_WEAPON = { // 武器の攻撃力累積(16★→30★)
+  150:[8,16,25,34,44,55,67,91,116,142,169,197,226,256,287],
+  160:[9,18,28,38,49,61,74,100,127,155,184,214,245,277,310],
+  200:[13,26,40,54,69,85,102,136,171,207,244,282,321,361,402],
+  250:[16,32,49,66,84,103,123,163,204,246,289,333,378,424,471],
+};
+function capStar(lv){ return lv>=138?30:lv>=128?20:lv>=118?15:lv>=108?10:lv>=95?8:5; }
+function nearBracket(lv,table){ const ks=Object.keys(table).map(Number).sort((a,b)=>a-b); let best=ks[0]; ks.forEach(k=>{ if(Math.abs(k-lv)<Math.abs(best-lv)) best=k; }); return best; }
+function sfMain(lv,star){ // 星による主ステ累積(22★で頭打ち、23★以降は攻撃力側)
+  star=Math.min(star,capStar(lv));
+  if(star<=15) return SF_P1[Math.max(0,Math.floor(star))];
+  const per=SF_PERSTAR[nearBracket(lv,SF_PERSTAR)];
+  return 40+per*Math.min(star-15,7);
+}
+function sfAtk(lv,star,isWeapon){ // 星による攻撃力累積(16★〜)
+  star=Math.min(star,capStar(lv));
+  if(star<16) return 0;
+  const t=isWeapon?SF_ATK_WEAPON:SF_ATK_ARMOR;
+  const arr=t[nearBracket(lv,t)];
+  return arr[Math.min(star-16,arr.length-1)]||0;
+}
+
+/* ===== セット段階テーブル(各段階の新規追加効果) ===== */
+const ARMOR_SET={
+  "アブソラブス":{2:{atk:20,boss:10},3:{allstat:30,atk:20,boss:10},4:{atk:25,ied:10},5:{atk:30,boss:10},6:{atk:20},7:{atk:20,ied:10}},
+  "アーケインシェイド":{2:{atk:30,boss:10},3:{atk:30,ied:10},4:{allstat:50,atk:35,boss:10},5:{atk:40,boss:10},6:{atk:30},7:{atk:30,ied:10}},
+  "エテルネル":{2:{atk:40,boss:10},3:{allstat:50,atk:40,boss:10},4:{atk:40,boss:10},5:{atk:40,ied:20},6:{atk:40,boss:15},7:{allstat:50,atk:40,boss:15},8:{atk:40,boss:15}},
+  "ルートアビス(帽・上・下)":{2:{allstat:20},3:{atk:50}}, // JMS公式: 2セット主副+20/HP1000、3セット攻魔+50/HP10%。4セット(ボスダメ30%)は武器ファフニールが必要
+};
+const ACC_SET={
+  "ボス装身具(9セット)":{3:{allstat:10,atk:5},5:{allstat:10,atk:5},7:{allstat:10,atk:10,ied:10},9:{allstat:15,atk:10,boss:10}},
+  "黎明":{2:{allstat:10,atk:10,boss:10},3:{allstat:10,atk:10},4:{allstat:10,atk:10,ied:10}},
+  "漆黒":{2:{allstat:10,atk:10,boss:10},3:{allstat:10,atk:10,ied:10},4:{allstat:15,atk:15,cd:5},5:{allstat:15,atk:15,boss:10},6:{allstat:15,atk:15,ied:10},7:{allstat:15,atk:15,cd:5},8:{allstat:15,atk:15,boss:10},9:{allstat:15,atk:15,cd:5},10:{allstat:20,atk:20,boss:10}},
+  "光輝":{2:{allstat:20,atk:20,boss:15},3:{ied:15},4:{cd:5},5:{boss:15},6:{cd:7.5}},
+  "ヴェラッド(最上級)":{2:{allstat:20},3:{atk:35},4:{boss:30,ied:30}}, // JMS公式セットガイド確認値
+  "ゴラックス(スペリオル)":{2:{allstat:20},3:{atk:35},4:{boss:30,ied:30}},
+};
+/* base=素の主ステ/部位, atk=素の攻撃力/部位, lv=装備Lv(スタフォ計算用), maxP=部位上限, sfMax=星を付けられる部位数(バッジ・勲章・ポケット・エンブレムは強化不可) */
+/* 防具素ステ(1部位平均): アーケイン40/エテルネル50=ユーザー実測値。アブソ20=部位別実値(手袋20/マント15/肩14)の平均、アビス33=帽40/上30/下30の実値平均。atk=素の攻撃力平均(手袋・肩に付く分) */
+const ARMOR_PC={"ルートアビス(帽・上・下)":{base:33,atk:2,lv:150,maxP:3},"アブソラブス":{base:20,atk:4,lv:160,maxP:6},"アーケインシェイド":{base:40,atk:3,lv:200,maxP:6},"エテルネル":{base:50,atk:0,lv:250,maxP:7}};
+const ACC_PC={
+  "ボス装身具(9セット)":{base:9,atk:2,lv:130,maxP:9,sfMax:7},
+  "黎明":{base:6,atk:3,lv:150,maxP:4,sfMax:4},
+  "漆黒":{base:16,atk:6,lv:200,maxP:9,sfMax:6},
+  "光輝":{base:13,atk:7,lv:250,maxP:6,sfMax:5},
+  "ヴェラッド(最上級)":{base:35,atk:12,lv:150,maxP:4,sfMax:4},
+  "ゴラックス(スペリオル)":{base:12,atk:5,lv:150,maxP:4,sfMax:4},
+};
+/* ===== 呪文書(書埋め)・転生の炎(追加オプション)の目安値 ===== */
+const SCROLL={ // 1部位フル書埋めの合計(武器8回・防具7回・アクセ5回想定)
+  "防具":{"なし":0,"70%書":28,"30%書":49,"15%書":70},        // 主ステ(1枚: 70%=+4/30%=+7/15%=+10)
+  "アクセ":{"なし":0,"70%書":15,"30%書":25},                  // 主ステ(1枚: 70%=+3/30%=+5、15%書はアクセ不可)
+  "武器":{"なし":0,"70%書":40,"30%書":56,"15%書":72},         // 攻撃力(1枚: 70%=+5/30%=+7/15%=+9)
+};
+const FLAME={ // 転生の炎(追加オプション)の目安・1部位あたり
+  "防具":{"なし":0,"弱":20,"中":40,"強":70},   // 主ステ換算
+  "アクセ":{"なし":0,"弱":20,"中":40,"強":70},
+  "武器":{"なし":0,"弱":50,"中":100,"強":175}, // 攻撃力
+};
+/* fd=破壊のヤルダバオト系の最終ダメ(ジェネ以上10%固定), bossIn/iedIn=武器の基本オプション, iedIn2=デスティニー2次超越の追加防無 */
+const WEAPON={
+  "アブソラブス":{atk:197,main:60,lv:160,fd:0,bossIn:30,iedIn:10},
+  "アーケインシェイド":{atk:283,main:100,lv:200,fd:0,bossIn:30,iedIn:20},
+  "ジェネシス":{atk:326,main:150,lv:200,fd:10,bossIn:30,iedIn:20},
+  "デスティニー(1次超越)":{atk:358,main:190,lv:250,fd:10,bossIn:30,iedIn:20},
+  "デスティニー(2次超越)":{atk:358,main:190,lv:250,fd:10,bossIn:45,iedIn:20,iedIn2:15},
+};
+const SUB={"アストラ":{atk:7,main:20,lv:200},"旧補助(職業別)":{atk:5,main:15,lv:0}};
+const EMBLEM={"エンブレム(標準)":{atk:2}};
+const UNION=[{main:0,att:0,boss:0,cd:0,hexa:0},{main:2000,att:10,boss:20,cd:10,hexa:1000},{main:3000,att:15,boss:30,cd:15,hexa:2000},{main:3800,att:20,boss:40,cd:20,hexa:6000}];
+const CATS={"防具":{list:ARMOR_SET,star:true},"アクセ":{list:ACC_SET,star:true},"武器":{list:WEAPON,star:true}};
+function accSet(t,p){ const e={allstat:0,atk:0,boss:0,ied:0,cd:0}; for(let n=2;n<=p;n++){ if(t[n]) for(const k in t[n]) e[k]+=t[n][k]; } return e; }
+
+let build=[]; let seq=0;
+function row(cat,rank,pieces,star,pct){ return {id:seq++,cat,rank,pieces,star,pct}; }
+/* ===== 定番テンプレ(装備のみ置換・キャラのベースは触らない) ===== */
+const TEMPLATES=[
+  {name:"週ボス入門", base:{level:260,symbols:13200}, rows:[ // アビス3+アブソ4・全身17★
+    {cat:"防具",rank:"ルートアビス(帽・上・下)",pieces:3,star:17,pct:18,scroll:"70%書",flame:"なし"},
+    {cat:"防具",rank:"アブソラブス",pieces:4,star:17,pct:18,scroll:"70%書",flame:"なし"},
+    {cat:"アクセ",rank:"ヴェラッド(最上級)",pieces:4,star:17,pct:15,scroll:"70%書",flame:"なし"},
+    {cat:"アクセ",rank:"ボス装身具(9セット)",pieces:5,star:17,pct:15,scroll:"70%書",flame:"なし"},
+    {cat:"武器",rank:"アーケインシェイド",pieces:1,star:17,substar:17,wboss:60,wied:20,watk:12,scroll:"70%書",flame:"弱"},
+  ]},
+  {name:"ハードボス周回", base:{level:265,symbols:20000}, rows:[ // アビス3+アーケイン4
+    {cat:"防具",rank:"ルートアビス(帽・上・下)",pieces:3,star:22,pct:21,scroll:"70%書",flame:"弱"},
+    {cat:"防具",rank:"アーケインシェイド",pieces:4,star:18,pct:21,scroll:"70%書",flame:"弱"},
+    {cat:"アクセ",rank:"ヴェラッド(最上級)",pieces:4,star:18,pct:15,scroll:"70%書",flame:"なし"},
+    {cat:"アクセ",rank:"ボス装身具(9セット)",pieces:5,star:18,pct:15,scroll:"70%書",flame:"なし"},
+    {cat:"武器",rank:"ジェネシス",pieces:1,star:22,substar:17,wboss:90,wied:20,watk:27,scroll:"70%書",flame:"中"},
+  ]},
+  {name:"上位サブ", base:{level:275,symbols:28200}, rows:[ // エテ3(アビスと入れ替え)+アーケイン4
+    {cat:"防具",rank:"エテルネル",pieces:3,star:22,pct:21,scroll:"70%書",flame:"中"},
+    {cat:"防具",rank:"アーケインシェイド",pieces:4,star:22,pct:30,scroll:"70%書",flame:"中"},
+    {cat:"アクセ",rank:"ヴェラッド(最上級)",pieces:4,star:22,pct:21,scroll:"70%書",flame:"なし"},
+    {cat:"アクセ",rank:"光輝",pieces:2,star:17,pct:15,scroll:"70%書",flame:"なし"},
+    {cat:"アクセ",rank:"ボス装身具(9セット)",pieces:3,star:18,pct:15,scroll:"70%書",flame:"なし"},
+    {cat:"武器",rank:"ジェネシス",pieces:1,star:22,substar:18,wboss:90,wied:40,watk:54,scroll:"30%書",flame:"強"},
+  ]},
+  {name:"エンドサブ", base:{level:285,symbols:28200}, rows:[ // エテルネル7部位
+    {cat:"防具",rank:"エテルネル",pieces:7,star:22,pct:30,scroll:"30%書",flame:"強"},
+    {cat:"アクセ",rank:"ヴェラッド(最上級)",pieces:4,star:22,pct:21,scroll:"30%書",flame:"中"},
+    {cat:"アクセ",rank:"光輝",pieces:4,star:17,pct:15,scroll:"70%書",flame:"なし"},
+    {cat:"武器",rank:"デスティニー(1次超越)",pieces:1,star:22,substar:22,wboss:105,wied:40,watk:70,scroll:"15%書",flame:"強"},
+  ]},
+];
+function applyTemplate(i){
+  const t=TEMPLATES[i]; if(!t) return;
+  build=t.rows.map(r=>({...r,id:seq++}));
+  // レベル・シンボルはキャラ固有なのでテンプレで設定。ユニオンはユーザー共通なので触らない
+  if(t.base){ $("level").value=t.base.level; $("symbols").value=t.base.symbols; }
+  renderRows(); calc();
+}
+function seed(){
+  build=TEMPLATES[1].rows.map(r=>({...r,id:seq++})); // 初期表示=ハードボス周回テンプレ
+}
+const gearListEl=document.getElementById("gearList");
+function firstRank(cat){ return Object.keys(CATS[cat].list)[0]; }
+function maxPieces(cat,rank){ if(cat==="防具") return ARMOR_PC[rank]?ARMOR_PC[rank].maxP:7; if(cat==="アクセ") return ACC_PC[rank]?ACC_PC[rank].maxP:4; return 1; }
+function pctLabel(cat){ return cat==="防具"||cat==="アクセ"?"主ステ%":(cat==="エンブレム"?"攻%":"ボスダメ%"); }
+function setInfoText(r){
+  if(r.cat==="防具"){ const e=accSet(ARMOR_SET[r.rank]||{},r.pieces); return `${r.pieces}セット: ${e.allstat?`全ステ+${e.allstat} `:""}攻+${e.atk}${e.boss?` ボスダメ+${e.boss}%`:""}${e.ied?` 防無+${e.ied}%`:""}`; }
+  if(r.cat==="アクセ"){ const e=accSet(ACC_SET[r.rank]||{},r.pieces); return `${r.pieces}セット: ${e.allstat?`全ステ+${e.allstat} `:""}${e.atk?`攻+${e.atk} `:""}${e.boss?`ボスダメ+${e.boss}% `:""}${e.ied?`防無+${e.ied}% `:""}${e.cd?`クリダメ+${e.cd}%`:""}`; }
+  return "";
+}
+function renderRows(){
+  gearListEl.innerHTML="";
+  build.forEach(r=>{
+    const c=CATS[r.cat];
+    const div=document.createElement("div"); div.className="gearrow";
+    const rankOpts=Object.keys(c.list).map(k=>`<option ${k===r.rank?"selected":""}>${k}</option>`).join("");
+    const mp=maxPieces(r.cat,r.rank);
+    const si=setInfoText(r);
+    const catSel=`<select data-k="cat">${Object.keys(CATS).map(k=>`<option ${k===r.cat?"selected":""}>${k}</option>`).join("")}</select>`;
+    if(r.cat==="武器"){
+      div.innerHTML=`
+        ${catSel}
+        <div style="grid-column:2/6;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px">
+          <select data-k="rank" style="width:112px">${rankOpts}</select>
+          <label style="color:var(--muted)">武器★<input data-k="star" type="number" min="0" max="30" value="${r.star??22}" style="width:44px;margin-left:3px;text-align:center"></label>
+          <label style="color:var(--muted)">補助★<input data-k="substar" type="number" min="0" max="30" value="${r.substar??17}" style="width:44px;margin-left:3px;text-align:center"></label>
+          <span style="color:var(--line)">｜</span>
+          <label style="color:var(--gold)">ボスダメ<input data-k="wboss" type="number" min="0" value="${r.wboss??90}" style="width:50px;margin:0 3px;text-align:center">%</label>
+          <label style="color:var(--gold)">無視<input data-k="wied" type="number" min="0" value="${r.wied??20}" style="width:44px;margin:0 3px;text-align:center">%</label>
+          <label style="color:var(--gold)">攻<input data-k="watk" type="number" min="0" value="${r.watk??0}" style="width:44px;margin:0 3px;text-align:center">%</label>
+          <span style="color:var(--line)">｜</span>
+          <label style="color:var(--cyan)">書<select data-k="scroll" style="width:74px;margin-left:3px">${Object.keys(SCROLL["武器"]).map(k=>`<option ${k===(r.scroll??"70%書")?"selected":""}>${k}</option>`).join("")}</select></label>
+          <label style="color:var(--cyan)">炎<select data-k="flame" style="width:58px;margin-left:3px">${Object.keys(FLAME["武器"]).map(k=>`<option ${k===(r.flame??"中")?"selected":""}>${k}</option>`).join("")}</select></label>
+        </div>
+        <button class="rm">×</button>`;
+    } else {
+      div.innerHTML=`
+        ${catSel}
+        <select data-k="rank">${rankOpts}</select>
+        <input data-k="pieces" type="number" min="1" max="${mp}" value="${r.pieces}">
+        <input data-k="star" type="number" min="0" max="30" value="${r.star}" ${c.star?"":"disabled style=opacity:.35"}>
+        <input data-k="pct" type="number" min="0" max="120" value="${r.pct}" title="${pctLabel(r.cat)}">
+        <button class="rm">×</button>
+        <div class="setinfo" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          ${si?`<span>${si}</span>`:""}
+          <label style="color:var(--cyan)">書<select data-k="scroll" style="width:74px;margin-left:3px;font-size:10.5px;padding:2px 3px">${Object.keys(SCROLL[r.cat]).map(k=>`<option ${k===(r.scroll??"70%書")?"selected":""}>${k}</option>`).join("")}</select></label>
+          <label style="color:var(--cyan)">炎<select data-k="flame" style="width:56px;margin-left:3px;font-size:10.5px;padding:2px 3px">${Object.keys(FLAME[r.cat]).map(k=>`<option ${k===(r.flame??"なし")?"selected":""}>${k}</option>`).join("")}</select></label>
+        </div>`;
+    }
+    div.querySelector(".rm").addEventListener("click",()=>{ build=build.filter(x=>x.id!==r.id); renderRows(); calc(); });
+    div.querySelectorAll("[data-k]").forEach(el=>el.addEventListener("input",()=>{
+      const k=el.dataset.k;
+      if(k==="cat"){ r.cat=el.value; r.rank=firstRank(r.cat); r.pieces=Math.min(r.pieces,maxPieces(r.cat,r.rank)); renderRows(); }
+      else if(k==="rank"){ r.rank=el.value; r.pieces=Math.min(r.pieces,maxPieces(r.cat,r.rank)); renderRows(); }
+      else if(k==="scroll"||k==="flame") r[k]=el.value;
+      else r[k]=parseFloat(el.value)||0;
+      calc();
+    }));
+    gearListEl.appendChild(div);
+  });
+}
+document.querySelectorAll(".tplbtn").forEach(b=>b.addEventListener("click",()=>applyTemplate(+b.dataset.tpl)));
+document.querySelectorAll(".addbtns button").forEach(b=>b.addEventListener("click",()=>{
+  const cat=b.dataset.cat;
+  build.push(row(cat,firstRank(cat),cat==="防具"?3:(cat==="アクセ"?4:1),CATS[cat].star?17:0,cat==="防具"||cat==="アクセ"?15:(cat==="エンブレム"?12:30)));
+  renderRows(); calc();
+}));
+
+const $=id=>document.getElementById(id);
+const num=id=>{ const v=parseFloat($(id).value); return isFinite(v)?v:0; };
+function combatPower(s){
+  const statPart=(s.mainStat*4+s.subStat)*0.01;
+  const totalAtk=Math.floor(s.att*(1+s.attPct/100));
+  return statPart*totalAtk*(1+(s.dmg+s.boss)/100)*(1+s.fd/100)*(1+(s.cr/100)*(s.cd/100));
+}
+const BOSSES=[{n:"イージー系(ザクム等)",cp:30},{n:"燃焼帯(4ルタ等)",cp:500},{n:"ノーマルスウ",cp:500},{n:"イージールシード/ウィル",cp:700},{n:"ハードスウ",cp:1500},{n:"ハードデミアン",cp:1700},{n:"ノーマルルシード/ウィル/デュンケル",cp:2000},{n:"ノーマル真ヒルラ",cp:2800},{n:"ハードルシード/ウィル/デュンケル",cp:3500},{n:"ノーマルセレン",cp:8000},{n:"ハード黒の魔法使い",cp:12000},{n:"ハードカリング",cp:100000},{n:"ハードリンボ",cp:140000}];
+function fmtCP(v){ if(v>=10000) return (v/10000).toFixed(2)+"億"; if(v>=1) return Math.round(v).toLocaleString("ja-JP")+"万"; return "0"; }
+
+function calc(){
+  const lv=+$("level").value;
+  const un=UNION[+$("union").value];
+  /* 装備集計 */
+  let gearFlat=0,gearAtk=0,gearBoss=0,gearCd=0,gearFd=0,potMainPct=0,attPctPot=0,iedKeep=1,hasWeapon=false;
+  build.forEach(r=>{
+    const p=Math.max(0,r.pieces||0);
+    if(r.cat==="防具"){
+      const pc=ARMOR_PC[r.rank]; if(!pc) return;
+      const e=accSet(ARMOR_SET[r.rank]||{},p);
+      const sc=SCROLL["防具"][r.scroll??"70%書"]||0, fl=FLAME["防具"][r.flame??"なし"]||0;
+      gearFlat+=p*(pc.base+sfMain(pc.lv,r.star)+sc+fl)+(e.allstat||0);
+      gearAtk+=p*((pc.atk||0)+sfAtk(pc.lv,r.star,false))+(e.atk||0);
+      gearBoss+=e.boss||0; gearCd+=e.cd||0;
+      if(e.ied) iedKeep*=(1-e.ied/100);
+      potMainPct+=p*(r.pct||0);
+    } else if(r.cat==="アクセ"){
+      const pc=ACC_PC[r.rank]; if(!pc) return;
+      const e=accSet(ACC_SET[r.rank]||{},p);
+      const sfP=Math.min(p,pc.sfMax); // 星を付けられる部位のみスタフォ計算
+      const sc=SCROLL["アクセ"][r.scroll??"70%書"]||0, fl=FLAME["アクセ"][r.flame??"なし"]||0;
+      gearFlat+=p*(pc.base+sc+fl)+sfP*sfMain(pc.lv,r.star)+(e.allstat||0);
+      gearAtk+=p*pc.atk+sfP*sfAtk(pc.lv,r.star,false)+(e.atk||0);
+      gearBoss+=e.boss||0; gearCd+=e.cd||0;
+      if(e.ied) iedKeep*=(1-e.ied/100);
+      potMainPct+=p*(r.pct||0);
+    } else if(r.cat==="武器"){
+      hasWeapon=true;
+      const d=WEAPON[r.rank]||WEAPON["ジェネシス"];
+      const wstar=r.star??22, sstar=r.substar??17;
+      // 武器の基礎攻撃力+スタフォ+主ステ+書+転生の炎
+      const wsc=SCROLL["武器"][r.scroll??"70%書"]||0, wfl=FLAME["武器"][r.flame??"中"]||0;
+      gearAtk+=d.atk+sfAtk(d.lv,wstar,true)+wsc+wfl;
+      gearFlat+=(d.main||0)+sfMain(d.lv,wstar);
+      gearFd+=(d.fd||0); // 破壊のヤルダバオト系: ジェネ以上で最終ダメ+10%固定
+      gearBoss+=(d.bossIn||0); // 武器の基本ボスダメ(30%、デスティニー2次は45%)
+      if(d.iedIn) iedKeep*=(1-d.iedIn/100);
+      if(d.iedIn2) iedKeep*=(1-d.iedIn2/100);
+      // 補助武器(アストラ)の基礎攻撃力+スタフォ
+      gearAtk+=7+sfAtk(200,sstar,false);
+      gearFlat+=20+sfMain(200,sstar);
+      // 武器・補助・エンブレムの潜在(合計値)
+      const wb=r.wboss??90, wi=r.wied??20, wa=r.watk??0;
+      gearBoss+=wb; attPctPot+=wa;
+      if(wi) iedKeep*=(1-wi/100);
+    }
+  });
+  /* ベース */
+  const baseFlat=5*lv+18 + (+$("symbols").value) + un.main + un.hexa + 450;
+  const mainStat=(baseFlat+gearFlat)*(1+potMainPct/100);
+  const subStat=Math.round(mainStat*0.08);
+  const att=num("advBaseAtt")+gearAtk+un.att;
+  const attPct=num("advAttPct")+attPctPot;
+  const dmg=num("advDmg");
+  const boss=gearBoss+un.boss;
+  const cd=num("advCd")+gearCd+un.cd;
+  const fd=num("advFd")+gearFd; // 上級設定(職スキル) + 武器由来(ジェネ/デスティニー解放の最終ダメ)
+  const iedBase=1-num("advIed")/100;
+  const ied=Math.min(100,(1-iedBase*iedKeep)*100);
+  const s={mainStat,subStat,att,attPct,dmg,boss,cr:100,cd,fd};
+  const cp=combatPower(s)/10000;
+  $("cpBig").textContent=fmtCP(cp);
+  $("cpRng").textContent="目安レンジ "+fmtCP(cp*0.8)+" 〜 "+fmtCP(cp*1.2);
+  $("stMain").textContent=Math.round(mainStat).toLocaleString("ja-JP");
+  $("stAtt").textContent=Math.round(att).toLocaleString("ja-JP")+" (+"+attPct+"%)";
+  $("stBoss").textContent="+"+Math.round(boss)+"%";
+  $("stIed").textContent=ied.toFixed(1)+"%";
+  $("stCd").textContent=cd.toFixed(1)+"%";
+  const bl=$("bossList"); bl.innerHTML="";
+  BOSSES.forEach(b=>{ const ok=cp>=b.cp; const d=document.createElement("div"); d.className="boss"+(ok?" clr":""); d.innerHTML=`<span class="dot"></span><span class="nm">${b.n}</span><span class="cp">${fmtCP(b.cp)}</span>`; bl.appendChild(d); });
+  const w=[];
+  if(!hasWeapon) w.push("武器がありません。武器を追加すると現実的な数値になります。");
+  build.forEach(r=>{
+    const lv = r.cat==="防具"?(ARMOR_PC[r.rank]||{}).lv : r.cat==="アクセ"?(ACC_PC[r.rank]||{}).lv : r.cat==="武器"?(WEAPON[r.rank]||{}).lv : r.cat==="補助"?(SUB[r.rank]||{}).lv : 0;
+    if(lv && r.star>capStar(lv)) w.push(`${r.rank}(Lv${lv})の星上限は★${capStar(lv)}です(超過分は上限で計算)。`);
+  });
+  const armorP=build.filter(r=>r.cat==="防具").reduce((a,r)=>a+(+r.pieces||0),0);
+  if(armorP>7) w.push(`防具が合計${armorP}部位(スロットは7まで)。`);
+  build.forEach(r=>{ const mp=maxPieces(r.cat,r.rank); if(r.pieces>mp) w.push(`${r.rank}は最大${mp}部位です。`); });
+  $("warnBox").innerHTML=[...new Set(w)].map(x=>`<div class="warnbox">⚠ ${x}</div>`).join("");
+}
+document.querySelectorAll("#level,#symbols,#union,#advFd,#advCd,#advDmg,#advAttPct,#advIed,#advBaseAtt").forEach(el=>el.addEventListener("input",()=>{ clearTimeout(window._t); window._t=setTimeout(calc,120); }));
+seed(); renderRows(); calc();
+window.__calc=calc; window.__build=build;
+</script>
+</body>
+</html>
