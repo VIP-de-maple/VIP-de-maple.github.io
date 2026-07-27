@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Everything EXP JMS版 ― CROWN対応 レベル計算機</title>
+<style>
+  :root{
+    --bg:#14101f; --panel:#1d1830; --panel2:#241d3a; --line:#332a4d;
+    --cyan:#59e3d8; --cyan-dim:rgba(89,227,216,.14);
+    --gold:#f2c14e; --gold-dim:rgba(242,193,78,.14);
+    --violet:#b28bf0;
+    --txt:#e8e4f5; --muted:#9a92b5; --warn:#ff8585;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;
+    --jp:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{color-scheme:dark}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(1000px 500px at 85% -10%, rgba(89,227,216,.06), transparent 60%),
+      radial-gradient(800px 420px at 0% 110%, rgba(140,90,220,.08), transparent 60%);
+    color:var(--txt); font-family:var(--jp); font-size:14px; line-height:1.6; padding:26px 18px 90px;
+  }
+  .wrap{max-width:1160px;margin:0 auto}
+  .backhome{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 14px;margin-bottom:16px}
+  .backhome:hover{color:var(--cyan);border-color:rgba(89,227,216,.45)}
+  header{margin-bottom:18px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .hexmark{width:50px;height:56px;flex:none}
+  h1{font-size:21px;font-weight:800;letter-spacing:.04em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px;max-width:740px}
+  .notice{background:var(--gold-dim);border:1px solid rgba(242,193,78,.35);border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:18px}
+  .notice b{color:var(--gold)}
+
+  .grid{display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start}
+  @media(max-width:960px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;margin-bottom:14px}
+  .eyebrow{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.18em;color:var(--cyan);font-weight:700;margin-bottom:11px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .hexglyph{width:11px;height:12px;flex:none}
+  .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px}
+  .field input,.field select{width:100%;background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:7px 9px;font-size:13.5px;font-family:var(--mono)}
+  .field select{font-family:var(--jp)}
+  .field input:focus,.field select:focus{outline:2px solid var(--cyan);border-color:transparent}
+  .r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .r3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+  .ckgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px}
+  @media(max-width:560px){.ckgrid{grid-template-columns:1fr}}
+  .ck{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:12.5px;cursor:pointer}
+  .ck input{accent-color:var(--cyan);width:14px;height:14px;flex:none}
+  .ck .lv{font-size:10px;color:var(--gold);font-family:var(--mono);flex:none}
+  .ck.dis{opacity:.4}
+  .tag{font-size:9.5px;border-radius:4px;padding:1px 6px;margin-left:auto;font-family:var(--mono);flex:none}
+  .tag.ok{color:#7ee787;background:rgba(126,231,135,.12)}
+  .tag.warn{color:var(--gold);background:var(--gold-dim)}
+  .tag.mid{color:var(--violet);background:rgba(178,139,240,.14)}
+  .cntrow{display:grid;grid-template-columns:1fr 90px 70px;gap:8px;align-items:center;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,.05)}
+  .cntrow:last-child{border-bottom:0}
+  .cntrow .nm{font-size:12.5px}
+  .cntrow .nm .lv{font-size:10px;color:var(--gold);font-family:var(--mono);margin-left:5px}
+  .cntrow input,.cntrow select{background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:4px 6px;font-size:12px;width:100%;font-family:var(--mono);text-align:center}
+
+  .sticky{position:sticky;top:12px}
+  .bigcard{background:linear-gradient(180deg,var(--gold-dim),transparent);border:1px solid rgba(242,193,78,.4);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .bigcard .lab{font-size:11px;color:var(--muted)}
+  .bigcard .big{font-family:var(--mono);font-size:32px;font-weight:700;color:var(--gold);line-height:1.2}
+  .bigcard .delta{font-family:var(--mono);font-size:12px;color:var(--cyan);margin-top:2px}
+  .steps{font-size:12px;line-height:1.7}
+  .steps .st{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.05)}
+  .steps .st:last-child{border-bottom:0}
+  .steps .st .k{color:var(--txt)}
+  .steps .st .v{font-family:var(--mono);color:var(--muted);white-space:nowrap}
+  .warnbox{background:rgba(255,133,133,.08);border:1px solid rgba(255,133,133,.3);border-radius:8px;padding:7px 11px;font-size:11.5px;color:var(--warn);margin-top:9px}
+  details{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-top:12px}
+  summary{cursor:pointer;padding:11px 15px;font-weight:700;font-size:12.5px;list-style:none;display:flex;gap:8px;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"＋";margin-left:auto;color:var(--muted)}
+  details[open] summary::after{content:"−"}
+  details .inner{padding:0 15px 13px;font-size:11.5px;color:var(--muted);line-height:1.7}
+  details .inner b{color:var(--gold)}
+  .footnote{margin-top:22px;font-size:11px;color:var(--muted);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="backhome" href="../">⬢ VIP de Maple — ツール一覧へ</a>
+
+<header>
+  <svg class="hexmark" viewBox="0 0 52 58" aria-hidden="true">
+    <polygon points="26,2 50,15 50,43 26,56 2,43 2,15" fill="none" stroke="#59e3d8" stroke-width="2.5"/>
+    <polygon points="26,14 40,22 40,36 26,44 12,36 12,22" fill="rgba(89,227,216,.12)" stroke="#f2c14e" stroke-width="1.5"/>
+  </svg>
+  <div>
+    <h1>Everything EXP <span style="color:var(--cyan);font-size:14px">JMS版</span></h1>
+    <div class="sub">やる予定のコンテンツを全部選ぶと、期間内の獲得EXPを合計して到達レベルを計算します(まだ入れないコンテンツもレベル制限を自動考慮)。CROWN経験値テーブル対応・ハイパーバーニングBEYOND対応。本家 whackybeanz.com の Everything EXP のJMS版です。</div>
+  </div>
+</header>
+
+<div class="notice">
+  <b>データの出どころ:</b> 経験値テーブル(CROWN・Lv200〜299)とコンテンツ別EXPは本家Everything EXP・MapleStory Wikiの実データを抽出したもの。デイリー/週課/モンパ/エピックダンジョン/秘薬すべて実数値で計算します。JMSはSEA/KMSと同じCROWNテーブルです。
+</div>
+
+<div class="grid">
+
+<div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>① 開始レベルとバーニング</div>
+    <div class="r3">
+      <div class="field"><label>現在レベル</label><input id="startLevel" type="number" min="200" max="299" value="220"></div>
+      <div class="field"><label>現在EXP(%)</label><input id="startPct" type="number" min="0" max="99.9" step="0.1" value="0"></div>
+      <div class="field"><label>バーニング</label>
+        <select id="burning">
+          <option value="none">なし</option>
+          <option value="beyond" selected>ハイパーバーニングBEYOND</option>
+        </select></div>
+    </div>
+    <div class="hint">BEYOND: レベルアップ時 Lv260まで+4(実質1+4)、Lv260〜270は+1(1+1)。期限10/27。Lv260到達時に再適用を忘れずに。</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>② 期間</div>
+    <div class="r2">
+      <div class="field"><label>開始日</label><input id="dateStart" type="date"></div>
+      <div class="field"><label>終了日</label><input id="dateEnd" type="date" value="2026-10-27"></div>
+    </div>
+    <div class="hint" id="dateInfo"></div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>③ デイリークエスト(毎日)</div>
+    <div class="ckgrid" id="dailies"></div>
+    <div class="hint">その地域のデイリーを毎日やる前提で加算。レベルが足りない地域は、シミュレーション中に到達した日から自動で加算開始します。</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>④ 週課(木曜リセット)</div>
+    <div id="weeklies"></div>
+    <div class="hint">アーケインリバー週課は週3回まで。回数はデフォルト3(フル消化)。</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>⑤ モンスターパーク / エピックダンジョン</div>
+    <div class="cntrow"><span class="nm">モンスターパーク(通常)<span class="lv">レベル帯の最適マップで自動計算</span></span><span style="font-size:10px;color:var(--muted);text-align:right">回/週</span><input id="mpRuns" type="number" min="0" max="7" value="7"></div>
+    <div class="cntrow"><span class="nm">モンスターパークEXTREME<span class="lv">Lv260+・週1</span></span><span style="font-size:10px;color:var(--muted);text-align:right">回/週</span><input id="mpeRuns" type="number" min="0" max="1" value="1"></div>
+    <div class="cntrow"><span class="nm">エピックダンジョン<span class="lv">週1・ID内3キャラまで</span></span>
+      <select id="epicSel" style="grid-column:2/4">
+        <option value="none">やらない</option>
+        <option value="auto" selected>レベルで自動(ハイマウンテン→アングラー→悪夢仙境)</option>
+      </select></div>
+    <div class="cntrow"><span class="nm">エピックダンジョン報酬倍率<span class="lv">メイポ課金</span></span>
+      <select id="epicMult" style="grid-column:2/4">
+        <option value="1" selected>1倍(無課金)</option>
+        <option value="5">5倍</option>
+        <option value="9">9倍</option>
+      </select></div>
+    <div class="hint">モンパが週7回未満の場合、日曜(1.5倍/+250%の日)を優先して消化する前提で計算します。</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>⑥ イベント自動適用(入力不要)</div>
+    <div class="ck" style="cursor:default"><span>モンパ 日曜クリア経験値1.5倍(恒常)→ 毎週日曜に自動適用</span><span class="tag ok">確定</span></div>
+    <div class="cntrow"><span class="nm">サンデーメイプルのモンパ+250%<span class="lv">毎回直前告知のため頻度で自動配置</span></span>
+      <select id="sunFreq" style="grid-column:2/4">
+        <option value="0">仮定しない(恒常1.5倍のみ)</option>
+        <option value="4">月1回ペース</option>
+        <option value="2" selected>月2回ペース(隔週・直近半年の実績)</option>
+      </select></div>
+    <div class="cntrow"><span class="nm">エラノス・クロニクル 累計討伐調査<span class="lv">週+5回で自動進行 → 25回=モンパ+30% / 15・30・50回=エピック×1.5/2/2.5(〜9/15)</span></span><span style="font-size:10px;color:var(--muted);text-align:right">回</span><input id="eranosCount" type="number" min="0" max="55" value="20"></div>
+    <div class="hint" id="evInfo"></div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>⑦ イベント・狩り(手入力)</div>
+    <div class="r2">
+      <div class="field"><label>狩りEXP(1日あたり・億単位)</label><input id="grindDaily" type="number" min="0" value="0"></div>
+      <div class="field"><label>イベントEXP(期間合計・億単位)</label><input id="eventTotal" type="number" min="0" value="0"></div>
+    </div>
+    <div class="hint">上級EXP交換券・メカベリー・EXPデュオなどはJMSでの実数値が固まっていないため手入力欄にしています(1億=100,000,000 EXP)。狩りをしないサブなら0でOK。</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>⑧ 成長の秘薬(最後に弱い順で使用)</div>
+    <div id="potions"></div>
+    <div class="hint">使用可能レベル内なら1個=1レベル、上限を超えていると固定EXP(=上限レベルのTNL相当)に変わります ── 本家と同じ仕様。<label style="color:var(--txt);cursor:pointer"><input type="checkbox" id="potionBurning" style="accent-color:var(--cyan);vertical-align:-2px"> 秘薬にもバーニングを適用する(仕様未確認)</label></div>
+  </div>
+</div>
+
+<div class="sticky">
+  <div class="bigcard">
+    <div class="lab">予測 到達レベル</div>
+    <div class="big" id="resultLevel">—</div>
+    <div class="delta" id="resultDelta"></div>
+  </div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>EXP内訳</div>
+    <div class="steps" id="breakdown"></div>
+    <div id="warnBox"></div>
+  </div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>目標レベル(任意)</div>
+    <div class="field"><input id="targetLevel" type="number" min="200" max="300" placeholder="例: 260"></div>
+    <div class="hint" id="targetInfo"></div>
+  </div>
+  <details>
+    <summary><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#9a92b5"/></svg>計算の仕組み・データ根拠</summary>
+    <div class="inner">
+      <p><b>エンジン:</b> 期間を1日ずつシミュレーション。毎日=デイリー+狩りEXP、木曜=週課+モンパEX+エピックダンジョン(その時点のレベルの報酬表で計算)。EXPが必要量(TNL)を超えるたびレベルアップし、バーニングのボーナスレベルを適用。最後に秘薬を弱い順に使用。レベル制限つきコンテンツは到達した日から自動で加算されます。</p>
+      <p><b>イベント自動適用:</b> コンテンツの基礎EXPはEverything EXP(CROWN反映後)の実数値をそのまま使用し、補正は掛けません。その上でJMSの日付依存バフだけを日ごとに判定します。(1)モンパ日曜1.5倍=公式ゲームガイド記載の恒常仕様、毎週日曜に自動。(2)サンデーメイプルのモンパ+250%は各回直前告知でしか確定しないため、実績頻度(直近半年で月1〜2回)にもとづき期間最初の日曜から選んだ周期ごとに自動配置(恒常1.5倍とは重複せず大きい方のみ)。(3)エラノス・クロニクル(〜9/15)は討伐調査の累計回数(週+5回で自動進行)で判定: 15/30/50回=エピックダンジョン×1.5/2/2.5(最大段階のみ)、25回=モンパ+30%(加算)。9/16以降は自動で打ち切り。</p>
+      <p><b>データ:</b> CROWN経験値テーブル(Lv200〜299全値)・デイリー/週課/モンパのEXPは本家Everything EXPの内部データから抽出。エピックダンジョン・モンパEXのレベル別報酬表はMapleStory Wikiから抽出。秘薬の上限超過EXP=上限レベルのTNL(全種で法則一致を確認)。</p>
+      <p><b>注意:</b> JMSのイベント固有アイテム(上級EXP交換券・メカベリー・EXPデュオ等)は情報源間で数値が食い違うため自動化せず手入力欄(⑦)のまま。宴の祝福・VIPサウナなど放置系EXPも実数値未確定のため未対応(狩りEXP欄で代用を)。紅き月の森(週1・Lv250+)は265,200,000,000 EXP固定。</p>
+    </div>
+  </details>
+</div>
+
+</div>
+
+<div class="footnote">
+  本家 <b>Everything EXP</b>(whackybeanz.com・Justin Eng氏作)へのリスペクトを込めたJMS版。経験値テーブル・コンテンツ値は2026年7月時点(CROWN)。イベント仕様の変更で数値が変わることがあります。非公式ファンツール。ⓒ NEXON
+</div>
+
+<script>
+"use strict";
+/* ===== CROWN 経験値テーブル TNL[Lv] = そのレベルから次のレベルまでの必要EXP (Lv200〜299) ===== */
+const TNL_BASE=200;
+const TNL=[
+2207026470,2471869646,2768494003,3100713283,3472798876,3889534741,4356278909,4879032378,5464516263,6120258214,
+7344309856,8152183940,9048924173,10044305832,11149179473,13379015367,14583126750,15895608157,17326212891,18885572051,
+22662686461,24249074513,25946509728,27762765408,29706158986,35647390783,38142708137,40812697706,43669586545,46726457603,
+56071749123,57753901596,59486518643,61271114202,63109247628,75731097153,78003030067,80343120969,82753414598,85236017035,
+102283220442,105351717055,108512268566,111767636622,115120665720,138144798864,142289142829,146557817113,150954551626,155483188174,
+186579825808,192177220582,197942537199,203880813314,209997237713,216297154844,222786069489,229469651573,236353741120,243444353353,
+1731919984062,1749239183902,1766731575741,1784398891498,1802242880412,2342915744535,2366344901980,2390008350999,2413908434508,2438047518853,
+5412465491853,5466590146771,5521256048238,5576468608720,5632233294807,11377111255510,12514822381061,13766304619167,15142935081083,16657228589191,
+33647601750165,37012361925181,40713598117699,44784957929468,49263453722414,99512176519276,109463394171214,120409733588335,132450706947169,145695777641870,
+294305470836577,323736017920234,356109619712257,391720581683482,430892639851830,870403132500696,957443445750765,1053187790325841,1158506569358425,1737759854037637
+];
+const tnl=L=> (L>=TNL_BASE && L<TNL_BASE+TNL.length) ? TNL[L-TNL_BASE] : Infinity;
+
+/* ===== デイリー(フラットEXP・minLevel) ===== */
+const DAILIES=[
+["消滅の旅路",200,732132258],["チュチュアイランド",210,2141658246],["レヘルン",220,3189098250],["アルカナ",225,3305187639],
+["モラス",230,4398266165],["エスフェラ",235,4530843954],["ムーンブリッジ",245,8397548775],["苦痛の迷宮",250,9057690000],
+["リメン",255,10225741680],["セルニウム",260,16455682080],["ホテルアルクス",265,19372782409],["オディウム",270,23246151120],
+["桃源郷",275,32127015480],["アルテリア",280,38593455264],["カルシオン",285,45635222880],["タラハート",290,89730912960],
+["ギアードラック",295,105641078400],
+];
+/* ===== 週課(フラットEXP・minLevel・最大回数/週) ===== */
+const WEEKLIES=[
+["エルダスペクトラム",200,187726220,3],["腹ペコムート",210,549143140,3],["ミッドナイトチェイサー",220,817717500,3],
+["スピリットセイバー",225,847484010,3],["エンハイムディフェンス",230,1127760555,3],["エスフェラ守護",235,1161754860,3],
+["紅き月の森",250,265200000000,1],
+];
+/* ===== モンスターパーク(通常): レベル帯の最適マップEXP ===== */
+const MP=[[200,359915080],[210,1285078680],[220,3217660990],[225,4707573370],[230,5993511040],[235,6919667370],[240,8712814920],[245,11716616500],[250,14058901000],[255,15552557400],[260,37474604460],[265,44435446300],[270,52818835200],[275,76639838000],[280,107204032000],[285,156017856000],[290,218575316000]];
+const mpExp=L=>{ let v=0; for(const [ml,e] of MP){ if(L>=ml) v=e; } return v; };
+/* ===== モンスターパークEXTREME(Lv260+・週1、レベル別) ===== */
+const MPE_TABLE={275:740271120000,276:749602080000,277:760157550000,278:769586940000,279:780227580000,280:876186885000,281:888143070000,282:898815840000,283:910862550000,284:921640890000,285:1036056075000,286:1048127520000,287:1061756505000,288:1075469130000,289:1087699695000,290:1222296090000,291:1235988060000,292:1251492060000,293:1267089135000};
+const mpeExp=L=>{ if(L<260) return 0; if(L<265) return L*1020000000; if(L<270) return L*1326000000; if(L<275) return L*2100000000; return MPE_TABLE[Math.min(L,293)]||MPE_TABLE[293]; };
+/* ===== エピックダンジョン(週1・レベル別・自動選択) ===== */
+const ED_HM={260:260900000000,261:264700000000,262:268500000000,263:272200000000,264:276500000000,265:311000000000,266:315300000000,267:319600000000,268:324500000000,269:328800000000,270:369800000000,271:375200000000,272:380100000000,273:385000000000,274:390600000000,275:439000000000,276:444500000000,277:450800000000,278:456400000000,279:462700000000,280:519600000000,281:526700000000,282:533000000000,283:540100000000,284:546500000000,285:614400000000,286:621500000000,287:629600000000,288:637700000000,289:645000000000,290:724800000000,291:732900000000,292:742100000000,293:751400000000};
+const ED_AC={270:554700000000,271:562800000000,272:570150000000,273:577500000000,274:585900000000,275:658500000000,276:666750000000,277:676200000000,278:684600000000,279:694050000000,280:779400000000,281:790050000000,282:799500000000,283:810150000000,284:819750000000,285:921600000000,286:932250000000,287:944400000000,288:956550000000,289:967500000000,290:1087200000000,291:1099350000000,292:1113150000000,293:1127100000000};
+const ED_NP={280:1039200000000,281:1053400000000,282:1066000000000,283:1080200000000,284:1093000000000,285:1228800000000,286:1243000000000,287:1259200000000,288:1275400000000,289:1290000000000,290:1449600000000,291:1465800000000,292:1484200000000,293:1502800000000};
+const edExp=L=>{ // レベルで最上位のダンジョンを自動選択
+  const cap=x=>Math.min(Math.max(L,260),293);
+  if(L>=280) return ED_NP[cap()]||ED_NP[293];
+  if(L>=270) return ED_AC[cap()]||ED_AC[293];
+  if(L>=260) return ED_HM[cap()]||ED_HM[293];
+  return 0;
+};
+/* ===== 成長の秘薬(min-max内=1レベル、上限超過=固定EXP(上限LvのTNL)) ===== */
+const POTS=[
+{id:"p_egp", name:"エクストリーム成長の秘薬", min:141, max:199, over:571115568, rand:true},
+{id:"p_gp1", name:"成長の秘薬1", min:200, max:209, over:6120258214},
+{id:"p_gp2", name:"成長の秘薬2", min:200, max:219, over:18885572051},
+{id:"p_gp3", name:"成長の秘薬3", min:200, max:229, over:46726457603},
+{id:"p_typ", name:"疾風の成長の秘薬", min:200, max:239, over:85236017035},
+{id:"p_max", name:"極限成長の秘薬", min:200, max:249, over:155483188174},
+{id:"p_leap",name:"飛躍成長の秘薬", min:200, max:259, over:243444353353},
+{id:"p_tra", name:"超越成長の秘薬", min:200, max:269, over:2438047518853},
+{id:"p_mush",name:"キノコの特製秘薬(〜274)", min:200, max:274, over:5632233294807},
+{id:"p_leg", name:"伝説成長の秘薬", min:200, max:279, over:16657228589191},
+];
+
+/* ===== イベント自動適用 =====
+   コンテンツ基礎値はEverything EXP(CROWN反映後)の実数値をそのまま信用し補正しない。
+   ここで扱うのはJMSの日付依存バフのみ:
+   ・モンパ日曜1.5倍=恒常仕様(公式ゲームガイド) → 毎週日曜に無条件適用
+   ・サンデーメイプルのモンパ+250%=毎回直前告知のため実績頻度(直近半年で月1〜2回)で周期配置
+   ・エラノス・クロニクル(〜9/15)=討伐調査の累計回数(週+5で自動進行)による段階バフ */
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const ERANOS_END="2026-09-15"; // エラノス・クロニクル効果の終了日
+
+/* ===== UI構築 ===== */
+const $=id=>document.getElementById(id);
+const num=id=>{ const v=parseFloat($(id).value); return isFinite(v)?Math.max(0,v):0; };
+const fmt=n=>n.toLocaleString("ja-JP");
+const dEl=$("dailies");
+DAILIES.forEach((d,i)=>{
+  const lab=document.createElement("label");
+  lab.className="ck";
+  lab.innerHTML=`<input type="checkbox" id="dl_${i}" checked><span>${d[0]}</span><span class="lv">Lv${d[1]}+</span>`;
+  dEl.appendChild(lab);
+});
+const wEl=$("weeklies");
+WEEKLIES.forEach((w,i)=>{
+  const row=document.createElement("div");
+  row.className="cntrow";
+  row.innerHTML=`<span class="nm">${w[0]}<span class="lv">Lv${w[1]}+</span></span><span style="font-size:10px;color:var(--muted);text-align:right">回/週</span><input id="wk_${i}" type="number" min="0" max="${w[3]}" value="${w[3]}">`;
+  wEl.appendChild(row);
+});
+const pEl=$("potions");
+POTS.forEach(p=>{
+  const row=document.createElement("div");
+  row.className="cntrow";
+  row.innerHTML=`<span class="nm">${p.name}<span class="lv">Lv${p.min}〜${p.max}</span></span><span style="font-size:10px;color:var(--muted);text-align:right">個数</span><input id="${p.id}" type="number" min="0" max="1000" value="0">`;
+  pEl.appendChild(row);
+});
+// 開始日デフォルト=今日
+{ const t=new Date(); $("dateStart").value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`; }
+
+/* ===== シミュレーション ===== */
+function calc(){
+  const startL=Math.min(299,Math.max(200,Math.round(num("startLevel"))));
+  const burning=$("burning").value==="beyond";
+  const potBurn=$("potionBurning").checked;
+  let L=startL;
+  let exp=tnl(L)*Math.min(0.999,num("startPct")/100);
+  const d0=$("dateStart").value?new Date($("dateStart").value+"T00:00:00"):new Date();
+  const d1=$("dateEnd").value?new Date($("dateEnd").value+"T00:00:00"):d0;
+  const days=Math.max(0,Math.round((d1-d0)/86400000)+1);
+  let thursdays=0;
+  for(let i=0;i<days;i++){ const dd=new Date(d0); dd.setDate(dd.getDate()+i); if(dd.getDay()===4) thursdays++; }
+  $("dateInfo").textContent=`期間 ${days}日(木曜 ${thursdays}回)。デイリーは毎日、週課・モンパEX・エピックダンジョンは木曜ごとに加算します。`;
+
+  const gains={daily:0,weekly:0,mp:0,mpe:0,epic:0,grind:0,event:0};
+  const sunFreq=+$("sunFreq").value;
+  const erBase=Math.min(55,Math.round(num("eranosCount")));
+  let cSunSp=0,cSunPlain=0,sunIdx=0;
+  const mpRuns=num("mpRuns"), mpeRuns=num("mpeRuns");
+  const epicOn=$("epicSel").value!=="none";
+  const epicMult=+$("epicMult").value;
+  const grindDaily=num("grindDaily")*1e8;
+  const eventPerDay=days>0? num("eventTotal")*1e8/days : 0;
+
+  const levelUp=()=>{ // EXPがTNLを超えている間レベルアップ(+バーニング)
+    let guard=0;
+    while(L<300 && exp>=tnl(L) && guard++<500){
+      exp-=tnl(L); L++;
+      if(burning){
+        if(L<260) L=Math.min(260,L+4);
+        else if(L<270) L=Math.min(270,L+1);
+      }
+      if(L>=300){ L=300; exp=0; break; }
+    }
+  };
+
+  for(let i=0;i<days && L<300;i++){
+    const dd=new Date(d0); dd.setDate(dd.getDate()+i);
+    const key=iso(dd);
+    // エラノス・クロニクル: 累計討伐調査回数(週+5で自動進行)→ 9/15まで恒常バフ
+    const erCount=Math.min(55, erBase + Math.floor(i/7)*5);
+    const erActive= key<=ERANOS_END;
+    const erMp= (erActive && erCount>=25)? 30 : 0;
+    const erEpic= erActive? (erCount>=50?2.5 : erCount>=30?2 : erCount>=15?1.5 : 1) : 1;
+    // 日曜のモンパバフ: サンデーメイプル+250%(頻度で周期配置) or 恒常1.5倍(重複なし・大きい方のみ)
+    let sunPct=0;
+    if(dd.getDay()===0){
+      const sp= (sunFreq>0 && sunIdx%sunFreq===0) ? 250 : 0;
+      sunPct=Math.max(50, sp);
+      if(sp) cSunSp++; else cSunPlain++;
+      sunIdx++;
+    }
+    // デイリー
+    DAILIES.forEach((d,idx)=>{ if($("dl_"+idx).checked && L>=d[1]){ exp+=d[2]; gains.daily+=d[2]; } });
+    if(grindDaily){ exp+=grindDaily; gains.grind+=grindDaily; }
+    if(eventPerDay){ exp+=eventPerDay; gains.event+=eventPerDay; }
+    // モンパ(通常): 週mpRuns回。週7未満なら日曜を優先し、残りを木曜から消化
+    if(mpRuns>0){
+      const dow=(dd.getDay()+3)%7; /* 木曜=0, 日曜=3 */
+      const runToday= mpRuns>=4 ? dow<mpRuns : (dd.getDay()===0 || dow<mpRuns-1);
+      if(runToday && L>=105){
+        const e=mpExp(L)*(1+(sunPct+erMp)/100); exp+=e; gains.mp+=e;
+      }
+    }
+    // 木曜: 週課
+    if(dd.getDay()===4){
+      WEEKLIES.forEach((w,idx)=>{ const n=num("wk_"+idx); if(n>0 && L>=w[1]){ exp+=w[2]*n; gains.weekly+=w[2]*n; } });
+      if(mpeRuns>0 && L>=260){ const e=mpeExp(L); exp+=e; gains.mpe+=e; }
+      if(epicOn && L>=260){ const e=edExp(L)*epicMult*erEpic; exp+=e; gains.epic+=e; }
+    }
+    levelUp();
+  }
+  $("evInfo").textContent = days>0
+    ? `この期間の日曜${sunIdx}回: モンパ+250%を${cSunSp}回と仮定、恒常1.5倍のみ${cSunPlain}回。エラノスは${erBase}回→週+5で自動進行、9/15までの日だけ適用(以降は自動打ち切り)。`
+    : "期間を設定すると適用予定を表示します。";
+  // 秘薬(弱い順=リスト順)
+  const potUsed=[];
+  POTS.forEach(p=>{
+    let n=Math.round(num(p.id)); if(n<=0) return;
+    let lvGain=0, expGain=0;
+    for(let k=0;k<n && L<300;k++){
+      if(L>=p.min && L<=p.max){
+        const g=p.rand? 5 : 1; // エクストリームは期待値約5レベルで近似
+        L=Math.min(300,L+g); lvGain+=g;
+        if(potBurn && burning){
+          if(L<260) L=Math.min(260,L+4);
+          else if(L<270) L=Math.min(270,L+1);
+        }
+        exp=Math.min(exp,tnl(L)*0.999);
+      } else if(L>p.max){
+        exp+=p.over; expGain+=p.over;
+        levelUp();
+      }
+      // Lv200未満でmin未満の秘薬は使えない→スキップ(残る)
+    }
+    if(lvGain||expGain) potUsed.push({name:p.name, n, lvGain, expGain});
+  });
+  levelUp();
+
+  const pct=L>=300?0:(exp/tnl(L)*100);
+  $("resultLevel").textContent=`Lv ${L}`+(L<300?` + ${pct.toFixed(1)}%`:"(カンスト)");
+  $("resultDelta").textContent=`Lv ${startL} から +${L-startL}レベル`;
+
+  const bd=$("breakdown"); bd.innerHTML="";
+  const items=[["デイリークエスト",gains.daily],["週課",gains.weekly],["モンスターパーク",gains.mp],["モンパEXTREME",gains.mpe],["エピックダンジョン",gains.epic],["狩り",gains.grind],["イベント(手入力)",gains.event]];
+  items.forEach(([k,v])=>{ if(v>0) bd.innerHTML+=`<div class="st"><span class="k">${k}</span><span class="v">${fmt(Math.round(v/1e8))}億</span></div>`; });
+  potUsed.forEach(p=>{ bd.innerHTML+=`<div class="st"><span class="k">${p.name} ×${p.n}</span><span class="v">${p.lvGain?`+${p.lvGain}Lv `:""}${p.expGain?fmt(Math.round(p.expGain/1e8))+"億":""}</span></div>`; });
+  if(!bd.innerHTML) bd.innerHTML='<div class="st"><span class="k" style="color:var(--muted)">コンテンツを選択してください</span></div>';
+
+  const w=[];
+  if(burning && startL>258) w.push("BEYONDの指定はLv258以下のキャラのみです。");
+  if($("dateEnd").value>"2026-10-27") w.push("CROWNイベント(バーニング等)は10/27までです。");
+  $("warnBox").innerHTML=w.map(x=>`<div class="warnbox">⚠ ${x}</div>`).join("");
+
+  const tgt=num("targetLevel");
+  $("targetInfo").textContent = tgt>=200 ? (L>=tgt? `目標Lv${tgt}に到達できる見込みです 🎉` : `目標Lv${tgt}まで あと${tgt-L}レベル足りません。期間を延ばすか秘薬・週課を追加してください。`) : "";
+  window.__lastGains=gains;
+}
+document.querySelectorAll("input,select").forEach(el=>{
+  el.addEventListener("input",()=>{ clearTimeout(window._t); window._t=setTimeout(calc,120); });
+});
+calc();
+window.__calc=calc; window.__tnl=tnl; window.__mpe=mpeExp; window.__ed=edExp;
+</script>
+</body>
+</html>
