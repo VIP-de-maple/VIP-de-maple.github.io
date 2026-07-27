@@ -144,20 +144,20 @@
 
   <div class="card">
     <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>⑤ モンスターパーク / エピックダンジョン</div>
-    <div class="cntrow"><span class="nm">モンスターパーク(通常)<span class="lv">レベル帯の最適マップで自動計算</span></span><span style="font-size:10px;color:var(--muted);text-align:right">回/週</span><input id="mpRuns" type="number" min="0" max="7" value="7"></div>
+    <div class="cntrow"><span class="nm">モンスターパーク(通常)<span class="lv">1日7回まで・レベル帯の最適マップで自動計算</span></span><span style="font-size:10px;color:var(--muted);text-align:right">回/日</span><input id="mpRuns" type="number" min="0" max="7" value="7"></div>
     <div class="cntrow"><span class="nm">モンスターパークEXTREME<span class="lv">Lv260+・週1</span></span><span style="font-size:10px;color:var(--muted);text-align:right">回/週</span><input id="mpeRuns" type="number" min="0" max="1" value="1"></div>
     <div class="cntrow"><span class="nm">エピックダンジョン<span class="lv">週1・ID内3キャラまで</span></span>
       <select id="epicSel" style="grid-column:2/4">
         <option value="none">やらない</option>
         <option value="auto" selected>レベルで自動(ハイマウンテン→アングラー→悪夢仙境)</option>
       </select></div>
-    <div class="cntrow"><span class="nm">エピックダンジョン報酬倍率<span class="lv">メイポ課金</span></span>
+    <div class="cntrow"><span class="nm">エピックダンジョン報酬倍率<span class="lv">メイポ課金・平均値で計算</span></span>
       <select id="epicMult" style="grid-column:2/4">
         <option value="1" selected>1倍(無課金)</option>
-        <option value="5">5倍</option>
-        <option value="9">9倍</option>
+        <option value="6">課金小: 最低保証5.5倍(平均約6倍で計算)</option>
+        <option value="11">課金大: 最低保証10倍(平均約11倍で計算)</option>
       </select></div>
-    <div class="hint">モンパが週7回未満の場合、日曜(1.5倍/+250%の日)を優先して消化する前提で計算します。</div>
+    <div class="hint">課金倍率は変動があるため平均値で計算します(最低保証で見たい場合との差は1割弱)。</div>
   </div>
 
   <div class="card">
@@ -185,7 +185,7 @@
   <div class="card">
     <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>⑧ 成長の秘薬(最後に弱い順で使用)</div>
     <div id="potions"></div>
-    <div class="hint">使用可能レベル内なら1個=1レベル、上限を超えていると固定EXP(=上限レベルのTNL相当)に変わります ── 本家と同じ仕様。<label style="color:var(--txt);cursor:pointer"><input type="checkbox" id="potionBurning" style="accent-color:var(--cyan);vertical-align:-2px"> 秘薬にもバーニングを適用する(仕様未確認)</label></div>
+    <div class="hint">使用可能レベル内なら1個=1レベル+バーニング分(BEYOND中はLv260まで実質5Lv、260〜270は2Lv)。上限を超えていると固定EXP(=上限レベルのTNL相当)に変わります ── 本家と同じ仕様。</div>
   </div>
 </div>
 
@@ -208,7 +208,7 @@
   <details>
     <summary><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#9a92b5"/></svg>計算の仕組み・データ根拠</summary>
     <div class="inner">
-      <p><b>エンジン:</b> 期間を1日ずつシミュレーション。毎日=デイリー+狩りEXP、木曜=週課+モンパEX+エピックダンジョン(その時点のレベルの報酬表で計算)。EXPが必要量(TNL)を超えるたびレベルアップし、バーニングのボーナスレベルを適用。最後に秘薬を弱い順に使用。レベル制限つきコンテンツは到達した日から自動で加算されます。</p>
+      <p><b>エンジン:</b> 期間を1日ずつシミュレーション。毎日=デイリー+モンパ(1日7回まで)+狩りEXP、木曜=週課+モンパEX+エピックダンジョン(その時点のレベルの報酬表で計算)。EXPが必要量(TNL)を超えるたびレベルアップし、バーニングのボーナスレベルを適用。最後に秘薬を弱い順に使用(秘薬のレベルアップにもバーニング適用)。レベル制限つきコンテンツは到達した日から自動で加算されます。エピックダンジョンの課金倍率は最低保証(5.5倍/10倍)ではなく平均値(約6倍/約11倍)で計算します。</p>
       <p><b>イベント自動適用:</b> コンテンツの基礎EXPはEverything EXP(CROWN反映後)の実数値をそのまま使用し、補正は掛けません。その上でJMSの日付依存バフだけを日ごとに判定します。(1)モンパ日曜1.5倍=公式ゲームガイド記載の恒常仕様、毎週日曜に自動。(2)サンデーメイプルのモンパ+250%は各回直前告知でしか確定しないため、実績頻度(直近半年で月1〜2回)にもとづき期間最初の日曜から選んだ周期ごとに自動配置(恒常1.5倍とは重複せず大きい方のみ)。(3)エラノス・クロニクル(〜9/15)は討伐調査の累計回数(週+5回で自動進行)で判定: 15/30/50回=エピックダンジョン×1.5/2/2.5(最大段階のみ)、25回=モンパ+30%(加算)。9/16以降は自動で打ち切り。</p>
       <p><b>データ:</b> CROWN経験値テーブル(Lv200〜299全値)・デイリー/週課/モンパのEXPは本家Everything EXPの内部データから抽出。エピックダンジョン・モンパEXのレベル別報酬表はMapleStory Wikiから抽出。秘薬の上限超過EXP=上限レベルのTNL(全種で法則一致を確認)。</p>
       <p><b>注意:</b> JMSのイベント固有アイテム(上級EXP交換券・メカベリー・EXPデュオ等)は情報源間で数値が食い違うため自動化せず手入力欄(⑦)のまま。宴の祝福・VIPサウナなど放置系EXPも実数値未確定のため未対応(狩りEXP欄で代用を)。紅き月の森(週1・Lv250+)は265,200,000,000 EXP固定。</p>
@@ -326,7 +326,6 @@ POTS.forEach(p=>{
 function calc(){
   const startL=Math.min(299,Math.max(200,Math.round(num("startLevel"))));
   const burning=$("burning").value==="beyond";
-  const potBurn=$("potionBurning").checked;
   let L=startL;
   let exp=tnl(L)*Math.min(0.999,num("startPct")/100);
   const d0=$("dateStart").value?new Date($("dateStart").value+"T00:00:00"):new Date();
@@ -334,7 +333,7 @@ function calc(){
   const days=Math.max(0,Math.round((d1-d0)/86400000)+1);
   let thursdays=0;
   for(let i=0;i<days;i++){ const dd=new Date(d0); dd.setDate(dd.getDate()+i); if(dd.getDay()===4) thursdays++; }
-  $("dateInfo").textContent=`期間 ${days}日(木曜 ${thursdays}回)。デイリーは毎日、週課・モンパEX・エピックダンジョンは木曜ごとに加算します。`;
+  $("dateInfo").textContent=`期間 ${days}日(木曜 ${thursdays}回)。デイリーとモンパは毎日、週課・モンパEX・エピックダンジョンは木曜ごとに加算します。`;
 
   const gains={daily:0,weekly:0,mp:0,mpe:0,epic:0,grind:0,event:0};
   const sunFreq=+$("sunFreq").value;
@@ -378,13 +377,9 @@ function calc(){
     DAILIES.forEach((d,idx)=>{ if($("dl_"+idx).checked && L>=d[1]){ exp+=d[2]; gains.daily+=d[2]; } });
     if(grindDaily){ exp+=grindDaily; gains.grind+=grindDaily; }
     if(eventPerDay){ exp+=eventPerDay; gains.event+=eventPerDay; }
-    // モンパ(通常): 週mpRuns回。週7未満なら日曜を優先し、残りを木曜から消化
-    if(mpRuns>0){
-      const dow=(dd.getDay()+3)%7; /* 木曜=0, 日曜=3 */
-      const runToday= mpRuns>=4 ? dow<mpRuns : (dd.getDay()===0 || dow<mpRuns-1);
-      if(runToday && L>=105){
-        const e=mpExp(L)*(1+(sunPct+erMp)/100); exp+=e; gains.mp+=e;
-      }
+    // モンパ(通常): 1日mpRuns回(CROWNで1日7回に拡張)
+    if(mpRuns>0 && L>=105){
+      const e=mpExp(L)*mpRuns*(1+(sunPct+erMp)/100); exp+=e; gains.mp+=e;
     }
     // 木曜: 週課
     if(dd.getDay()===4){
@@ -406,7 +401,7 @@ function calc(){
       if(L>=p.min && L<=p.max){
         const g=p.rand? 5 : 1; // エクストリームは期待値約5レベルで近似
         L=Math.min(300,L+g); lvGain+=g;
-        if(potBurn && burning){
+        if(burning){ // 秘薬のレベルアップにもバーニング適用(ユーザー実機確認済み)
           if(L<260) L=Math.min(260,L+4);
           else if(L<270) L=Math.min(270,L+1);
         }
