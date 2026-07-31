@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハイパーステータス 適正振り計算機</title>
+<style>
+  :root{
+    --bg:#14101f; --panel:#1d1830; --panel2:#241d3a; --line:#332a4d;
+    --cyan:#59e3d8; --cyan-dim:rgba(89,227,216,.14);
+    --gold:#f2c14e; --gold-dim:rgba(242,193,78,.14);
+    --violet:#b28bf0;
+    --txt:#e8e4f5; --muted:#9a92b5; --warn:#ff8585;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;
+    --jp:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{color-scheme:dark}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(1000px 500px at 85% -10%, rgba(89,227,216,.06), transparent 60%),
+      radial-gradient(800px 420px at 0% 110%, rgba(140,90,220,.08), transparent 60%);
+    color:var(--txt); font-family:var(--jp); font-size:14px; line-height:1.6; padding:26px 18px 90px;
+  }
+  .wrap{max-width:1160px;margin:0 auto}
+  .backhome{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 14px;margin-bottom:16px}
+  .backhome:hover{color:var(--cyan);border-color:rgba(89,227,216,.45)}
+  header{margin-bottom:18px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .hexmark{width:50px;height:56px;flex:none}
+  h1{font-size:21px;font-weight:800;letter-spacing:.04em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px;max-width:760px}
+  .notice{background:var(--gold-dim);border:1px solid rgba(242,193,78,.35);border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:18px}
+  .notice b{color:var(--gold)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  @media(max-width:960px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;margin-bottom:14px}
+  .eyebrow{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.18em;color:var(--cyan);font-weight:700;margin-bottom:11px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .hexglyph{width:11px;height:12px;flex:none}
+  .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px}
+  .field input,.field select{width:100%;background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:7px 9px;font-size:13.5px;font-family:var(--mono)}
+  .field select{font-family:var(--jp)}
+  .field input:focus,.field select:focus{outline:2px solid var(--cyan);border-color:transparent}
+  .r2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+  .r3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+  .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .ptbadge{font-family:var(--mono);color:var(--gold);font-size:12px}
+
+  .hsgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px}
+  @media(max-width:560px){.hsgrid{grid-template-columns:1fr}}
+  .hsrow{display:grid;grid-template-columns:1fr 64px;gap:8px;align-items:center;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.05)}
+  .hsrow .nm{font-size:12.5px}
+  .hsrow .nm .mx{font-size:10px;color:var(--muted);font-family:var(--mono);margin-left:4px}
+  .hsrow input{background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:4px 6px;font-size:12.5px;width:100%;font-family:var(--mono);text-align:center}
+
+  .resultgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  @media(max-width:960px){.resultgrid{grid-template-columns:1fr}}
+  .bigcard{background:linear-gradient(180deg,var(--gold-dim),transparent);border:1px solid rgba(242,193,78,.4);border-radius:12px;padding:12px 16px;margin-bottom:12px}
+  .bigcard .lab{font-size:11px;color:var(--muted)}
+  .bigcard .big{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--gold);line-height:1.25}
+  .bigcard .delta{font-family:var(--mono);font-size:11.5px;color:var(--cyan);margin-top:2px}
+  table.alloc{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.alloc th{font-size:10.5px;color:var(--muted);text-align:left;padding:3px 6px;border-bottom:1px solid var(--line);font-weight:600}
+  table.alloc td{padding:4px 6px;border-bottom:1px dashed rgba(255,255,255,.06)}
+  table.alloc td.lv{font-family:var(--mono);white-space:nowrap}
+  table.alloc td.ef{font-family:var(--mono);color:var(--muted);font-size:11.5px;white-space:nowrap;text-align:right}
+  .up{color:var(--cyan);font-weight:700}
+  .down{color:var(--warn);font-weight:700}
+  .keep{color:var(--muted)}
+  .ptline{font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-top:8px}
+  .warnbox{background:rgba(255,133,133,.08);border:1px solid rgba(255,133,133,.3);border-radius:8px;padding:7px 11px;font-size:11.5px;color:var(--warn);margin-top:9px}
+  .basebox{font-size:11.5px;color:var(--muted);font-family:var(--mono);line-height:1.8}
+  .basebox b{color:var(--txt);font-weight:600}
+  details{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-top:14px}
+  summary{cursor:pointer;padding:11px 15px;font-weight:700;font-size:12.5px;list-style:none;display:flex;gap:8px;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"＋";margin-left:auto;color:var(--muted)}
+  details[open] summary::after{content:"−"}
+  details .inner{padding:0 15px 13px;font-size:11.5px;color:var(--muted);line-height:1.7}
+  details .inner b{color:var(--gold)}
+  .footnote{margin-top:22px;font-size:11px;color:var(--muted);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="backhome" href="../">⬢ VIP de Maple — ツール一覧へ</a>
+
+<header>
+  <svg class="hexmark" viewBox="0 0 52 58" aria-hidden="true">
+    <polygon points="26,2 50,15 50,43 26,56 2,43 2,15" fill="none" stroke="#59e3d8" stroke-width="2.5"/>
+    <polygon points="26,14 40,22 40,36 26,44 12,36 12,22" fill="rgba(242,193,78,.12)" stroke="#f2c14e" stroke-width="1.5"/>
+  </svg>
+  <div>
+    <h1>ハイパーステータス 適正振り計算機</h1>
+    <div class="sub">ステータス画面の表示値と今のハイパーステ振りを入れると、素の値を逆算して<b>ボス用</b>と<b>狩り用</b>の最適配分を厳密計算します。クリティカル率100%確保が絶対条件。狩り用は経験値獲得Lv15を確定で確保します。</div>
+  </div>
+</header>
+
+<div class="notice">
+  <b>データ根拠:</b> 効果値・ポイント獲得量・必要ポイントはJMS公式ゲームガイド準拠(KMSナムウィキ・invenで検証)。配分は貪欲法ではなく全組み合わせの厳密最適解(DP)です。火力モデルはHEXA計算機と同じ。
+</div>
+
+<div class="grid">
+
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>① キャラクター(ステータス画面の表示値のまま)</div>
+    <div class="r3">
+      <div class="field"><label>レベル</label><input id="level" type="number" min="140" max="300" value="260"></div>
+      <div class="field"><label>職業タイプ</label>
+        <select id="cls">
+          <option value="normal">通常(メイン+サブ)</option>
+          <option value="xenon">キセノン(STR+DEX+LUK)</option>
+          <option value="da">デーモンアベンジャー(MaxHP)</option>
+        </select></div>
+      <div class="field"><label>保有ポイント</label><div class="ptbadge" id="ptShow" style="padding:8px 2px">—</div></div>
+    </div>
+    <div id="statNormal" class="r2">
+      <div class="field"><label>メインステータス(表示値)</label><input id="mainStat" type="number" value="120000" min="1"></div>
+      <div class="field"><label>サブステータス(表示値)</label><input id="subStat" type="number" value="6000" min="0"></div>
+    </div>
+    <div id="statXenon" class="r2" style="display:none">
+      <div class="field"><label>STR+DEX+LUKの合計(表示値)</label><input id="xenonSum" type="number" value="150000" min="1"></div>
+      <div></div>
+    </div>
+    <div id="statDA" class="r2" style="display:none">
+      <div class="field"><label>MaxHP(表示値)</label><input id="daHP" type="number" value="1500000" min="1"></div>
+      <div></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>攻撃力/魔力(表示値)</label><input id="att" type="number" value="4000" min="1"></div>
+      <div class="field"><label>攻撃力/魔力%の合計</label><input id="attPct" type="number" value="100" min="0"></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>ダメージ(%)</label><input id="dmg" type="number" value="120" min="0"></div>
+      <div class="field"><label>ボスダメージ(%)</label><input id="boss" type="number" value="380" min="0"></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>クリティカルダメージ(%・表示値)</label><input id="cd" type="number" value="90" min="0"></div>
+      <div class="field"><label>クリティカル率(%)</label><input id="cr" type="number" value="100" min="0" max="200"></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>防御率無視(%・合計)</label><input id="ied" type="number" value="94" min="0" max="100" step="0.1"></div>
+      <div class="field"><label>一般モンスターダメージ(%)</label><input id="norm" type="number" value="0" min="0"></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>ボス用: 敵の防御率(%)</label><input id="pdrBoss" type="number" value="300" min="0"></div>
+      <div class="field"><label>狩り用: 敵の防御率(%)</label><input id="pdrHunt" type="number" value="30" min="0"></div>
+    </div>
+    <div class="hint">全部<b>今の表示値のまま</b>でOK(ハイパー込み)。②の現在振りから素の値を逆算します。一般モンスターダメージはハイパー・リンク等の合計(不明なら0)。クリ率が100%で頭打ち表示の場合は安全側(=素のクリ率を低め)に見積もります。</div>
+  </div>
+
+  <div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>② 現在のハイパーステ振り(Lv)</div>
+    <div class="hsgrid">
+      <div class="hsrow"><span class="nm" id="hsStatLabel">メインステータス<span class="mx">/15</span></span><input id="hs_stat" type="number" min="0" max="15" value="0"></div>
+      <div class="hsrow"><span class="nm">攻撃力・魔力<span class="mx">/15</span></span><input id="hs_att" type="number" min="0" max="15" value="0"></div>
+      <div class="hsrow"><span class="nm">ダメージ<span class="mx">/15</span></span><input id="hs_dmg" type="number" min="0" max="15" value="0"></div>
+      <div class="hsrow"><span class="nm">ボスモンスターダメージ<span class="mx">/15</span></span><input id="hs_boss" type="number" min="0" max="15" value="0"></div>
+      <div class="hsrow"><span class="nm">一般モンスターダメージ<span class="mx">/15</span></span><input id="hs_norm" type="number" min="0" max="15" value="0"></div>
+      <div class="hsrow"><span class="nm">クリティカル発動確率<span class="mx">/15</span></span><input id="hs_cr" type="number" min="0" max="15" value="0"></div>
+      <div class="hsrow"><span class="nm">クリティカルダメージ<span class="mx">/15</span></span><input id="hs_cd" type="number" min="0" max="15" value="0"></div>
+      <div class="hsrow"><span class="nm">防御率無視<span class="mx">/15</span></span><input id="hs_ied" type="number" min="0" max="15" value="0"></div>
+      <div class="hsrow"><span class="nm">経験値獲得<span class="mx">/15</span></span><input id="hs_exp" type="number" min="0" max="15" value="0"></div>
+    </div>
+    <div class="hint">今振っているLvをそのまま入力(振ってなければ0)。HP/MP・耐性・アーケインフォース等の火力に関係ない振りは入力不要(比較には影響しません)。</div>
+  </div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#b28bf0"/></svg>逆算した素の値(ハイパー抜き)</div>
+    <div class="basebox" id="baseShow">—</div>
+    <div id="baseWarn"></div>
+  </div>
+  </div>
+
+</div>
+
+<div class="eyebrow" style="margin:6px 0 12px"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>最適配分</div>
+<div class="resultgrid">
+  <div class="card" id="resBoss"></div>
+  <div class="card" id="resHunt"></div>
+</div>
+
+<details>
+  <summary><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#9a92b5"/></svg>仕様・データ根拠</summary>
+  <div class="inner">
+    <p><b>ポイント獲得:</b> Lv140で3pt、以降レベルアップごとに 3+⌊(Lv−140)/10⌋ pt(140代=3/Lv → 290代=18/Lv、Lv300=19)。累計はLv260=1,035 / Lv275=1,266 / Lv300=1,699(JMS公式ゲームガイドのポイント表と一致)。</p>
+    <p><b>必要ポイント:</b> Lv1→15の各コスト 1,2,4,8,10,15,20,25,30,35,50,65,80,95,110(1種Lv15まで累計550pt)。</p>
+    <p><b>効果値(JMS公式ガイド):</b> 主ステ+30/Lv、攻撃力・魔力+3/Lv、ダメージ+3%/Lv(最大45%)、ボス・一般モンスターダメージ+3%/Lv(Lv6から+4%/Lv、最大55%)、クリ率+1%/Lv(Lv6から+2%/Lv、最大25%)、クリダメ+1%/Lv、防御率無視+3%/Lv(ハイパー内は単純加算で1ソース扱い→装備等と乗算合成)、経験値+0.5%/Lv(Lv11から+1%/Lv、最大10%)。※ダメージの45%はGMS系wikiのレベル別実表・韓国攻略ブログ・ナムウィキ再照会など複数の独立ソースで検証済み(「55%」説はナムウィキのボスダメ行との取り違えが原因)。</p>
+    <p><b>計算モデル(HEXA計算機と同一):</b> 火力 ∝ 攻撃力 × ステータス項 × (1+(ダメージ+ボスダメ or 一般ダメ)/100) × (1+クリ率×クリダメ) × (1−敵防御率×(1−防御無視))。攻撃力ハイパーは攻撃力%が乗った表示値換算。デーモンアベンジャーはHP(%)ハイパーを表示HP×2%/Lvで近似(僅かに過大評価)。</p>
+    <p><b>配分アルゴリズム:</b> ①クリ率100%に届く最低Lvを最優先で確保(素で100%あれば0)。②狩り用は経験値Lv15(550pt)を確保。③残りポイントで、ダメージ×ボスダメ(狩りは×一般ダメ)の組み合わせも含めた全パターンを動的計画法で探索した<b>厳密な最適解</b>。クリ率は100%を超える分には振りません。</p>
+    <p><b>比較の基準:</b> 火力上昇率は「今の振り(②)」の火力に対する倍率です。今の振りでクリ率が100%未満の場合、現在火力もその(低い)クリ率で評価されます。</p>
+  </div>
+</details>
+
+<div class="footnote">
+  非公式ファンツール。数値はJMS公式ゲームガイド(2026年7月時点・CROWN後)準拠、KMS(namu.wiki/inven)で検証。プリセット変更は無料・全リセットは1,000万メル(CROWN仕様)。ⓒ NEXON
+</div>
+
+</div>
+
+<script>
+"use strict";
+/* ===== 定数(JMS公式ガイド準拠) ===== */
+const COST=[0,1,2,4,8,10,15,20,25,30,35,50,65,80,95,110];
+const cumCost=lv=>{ let s=0; for(let i=1;i<=lv;i++) s+=COST[i]; return s; };
+const ptsAt=L=>{ if(L<140) return 0; let p=3; for(let x=141;x<=Math.min(L,300);x++) p+=3+Math.floor((x-140)/10); return p; };
+const CR_CUM=lv=> lv<=5? lv : 5+2*(lv-5);            // クリ率: 最大25%
+const BOSS_CUM=lv=> lv<=5? 3*lv : 15+4*(lv-5);       // ボスダメ: 最大55%
+const NORM_CUM=BOSS_CUM;                              // 一般ダメ: 同型
+const DMG_CUM=lv=> 3*lv;                              // ダメージ: JMS公式45%(KMSは55%の情報あり)
+const CD_CUM=lv=> lv;
+const IED_CUM=lv=> 3*lv;
+const ATT_CUM=lv=> 3*lv;
+const STAT_CUM=lv=> 30*lv;
+const EXP_CUM=lv=> lv<=10? 0.5*lv : 5+(lv-10);
+
+const $=id=>document.getElementById(id);
+const num=id=>{ const v=parseFloat($(id).value); return isFinite(v)?v:0; };
+const lvIn=id=>Math.min(15,Math.max(0,Math.round(num(id))));
+const f1=x=>x.toLocaleString("ja-JP",{maximumFractionDigits:1});
+
+/* ===== 入力と逆算 ===== */
+function readAll(){
+  const cls=$("cls").value;
+  const inp={
+    cls, level:Math.min(300,Math.max(100,Math.round(num("level")))),
+    att:Math.max(1,num("att")), attPct:Math.max(0,num("attPct")),
+    dmg:num("dmg"), boss:num("boss"), norm:num("norm"),
+    cd:num("cd"), cr:Math.max(0,num("cr")),
+    ied:Math.min(100,Math.max(0,num("ied"))),
+    pdrBoss:Math.max(0,num("pdrBoss")), pdrHunt:Math.max(0,num("pdrHunt")),
+    mainStat:Math.max(1,num("mainStat")), subStat:Math.max(0,num("subStat")),
+    xenonSum:Math.max(1,num("xenonSum")), daHP:Math.max(1,num("daHP")),
+    cur:{
+      stat: cls==="xenon" ? Math.min(45,Math.max(0,Math.round(num("hs_stat")))) : lvIn("hs_stat"),
+      att:lvIn("hs_att"), dmg:lvIn("hs_dmg"), boss:lvIn("hs_boss"), norm:lvIn("hs_norm"),
+      cr:lvIn("hs_cr"), cd:lvIn("hs_cd"), ied:lvIn("hs_ied"), exp:lvIn("hs_exp"),
+    },
+  };
+  return inp;
+}
+function computeBase(inp){
+  const warns=[];
+  const attMul=1+inp.attPct/100;
+  const c=inp.cur;
+  const base={
+    att: inp.att - ATT_CUM(c.att)*attMul,
+    dmg: inp.dmg - DMG_CUM(c.dmg),
+    boss: inp.boss - BOSS_CUM(c.boss),
+    norm: inp.norm - NORM_CUM(c.norm),
+    cd: inp.cd - CD_CUM(c.cd),
+    cr: inp.cr - CR_CUM(Math.min(15,c.cr)),
+    ied: 100*(1-(1-inp.ied/100)/(1-IED_CUM(c.ied)/100)),
+    stat:1, sub:0, attMul,
+  };
+  if(inp.cls==="normal"){ base.stat=inp.mainStat - STAT_CUM(c.stat); base.sub=inp.subStat; }
+  else if(inp.cls==="xenon"){ base.stat=inp.xenonSum - 30*c.stat; }
+  else { base.stat=inp.daHP/(1+0.02*Math.min(15,c.stat)); }
+  if(base.att<=0){ base.att=1; warns.push("攻撃力の入力値より現在ハイパー分が大きくなっています。"); }
+  if(base.stat<=0){ base.stat=1; warns.push("ステータスの入力値より現在ハイパー分が大きくなっています。"); }
+  if(base.cd<0) base.cd=0;
+  if(base.dmg<0) base.dmg=0;
+  if(base.boss<0) base.boss=0;
+  if(base.norm<0) base.norm=0;
+  if(base.cr<0){ base.cr=0; warns.push("クリ率の入力値より現在ハイパー分が大きくなっています。"); }
+  if(base.ied<0) base.ied=0;
+  if(inp.cr>=100 && c.cr>0) warns.push("クリ率が100%で頭打ち表示の可能性があります。実際の素クリ率が高い場合、推奨クリ率Lvはここまで要りません(安全側で計算しています)。");
+  return {base,warns};
+}
+
+/* ===== 火力スコア ===== */
+function statTerm(base,cls,lv){ // lv=主ステ系ハイパーLv(xenonは合計Lv, daはHP%Lv)
+  if(cls==="normal") return 4*(base.stat+STAT_CUM(lv))+base.sub;
+  if(cls==="xenon") return base.stat+30*lv;
+  return base.stat*(1+0.02*lv);
+}
+function score(base,cls,mode,pdr,a){ // a={stat,att,dmg,boss,norm,cr,cd,ied}
+  const att=base.att+ATT_CUM(a.att)*base.attMul;
+  const st=statTerm(base,cls,a.stat);
+  const dmgSum=base.dmg+DMG_CUM(a.dmg)+(mode==="boss"? base.boss+BOSS_CUM(a.boss) : base.norm+NORM_CUM(a.norm));
+  const D=1+dmgSum/100;
+  const crEff=Math.min(100, base.cr+CR_CUM(a.cr));
+  const C=1+(crEff/100)*((base.cd+CD_CUM(a.cd))/100);
+  const iedT=1-(1-base.ied/100)*(1-IED_CUM(a.ied)/100);
+  const I=Math.max(1e-6, 1-(pdr/100)*(1-iedT));
+  return att*st*D*C*I;
+}
+
+/* ===== 多肢選択ナップサックDP(厳密解) ===== */
+function optimizeDP(groups,budget){
+  let dp=new Float64Array(budget+1); const choices=[];
+  for(const g of groups){
+    const ndp=new Float64Array(budget+1).fill(-Infinity);
+    const ch=new Int16Array(budget+1).fill(0);
+    for(let b=0;b<=budget;b++){
+      for(let i=0;i<g.options.length;i++){
+        const o=g.options[i]; if(o.cost>b) continue;
+        const v=dp[b-o.cost]+o.lg;
+        if(v>ndp[b]){ ndp[b]=v; ch[b]=i; }
+      }
+    }
+    dp=ndp; choices.push(ch);
+  }
+  let b=budget; const picked=[];
+  for(let gi=groups.length-1;gi>=0;gi--){
+    const i=choices[gi][b]; const o=groups[gi].options[i];
+    picked[gi]=o; b-=o.cost;
+  }
+  return picked;
+}
+function buildGroups(base,cls,mode,pdr,crLv){
+  const groups=[];
+  // 攻撃力
+  {
+    const t0=base.att+0;
+    const opts=[]; for(let l=0;l<=15;l++) opts.push({cost:cumCost(l),lg:Math.log((base.att+ATT_CUM(l)*base.attMul)/t0),lv:l,id:"att"});
+    groups.push({id:"att",options:opts});
+  }
+  // 主ステ系
+  {
+    const t0=statTerm(base,cls,0);
+    const maxLv=cls==="xenon"?45:15;
+    const xc=[]; if(cls==="xenon"){ // 3種合計Lvのコスト(安い順=均等割り)
+      for(let k=0;k<=45;k++){ const q=Math.floor(k/3),r=k%3; xc[k]=3*cumCost(q)+ (r>0? r*COST[q+1] : 0); }
+    }
+    const opts=[]; for(let l=0;l<=maxLv;l++) opts.push({cost:cls==="xenon"?xc[l]:cumCost(l),lg:Math.log(statTerm(base,cls,l)/t0),lv:l,id:"stat"});
+    groups.push({id:"stat",options:opts});
+  }
+  // ダメージ × (ボスダメ or 一般ダメ) 複合
+  {
+    const d0=1+(base.dmg+(mode==="boss"?base.boss:base.norm))/100;
+    const opts=[];
+    for(let a=0;a<=15;a++) for(let b2=0;b2<=15;b2++){
+      const d=1+(base.dmg+DMG_CUM(a)+(mode==="boss"?base.boss+BOSS_CUM(b2):base.norm+NORM_CUM(b2)))/100;
+      opts.push({cost:cumCost(a)+cumCost(b2),lg:Math.log(d/d0),lv:a,lv2:b2,id:"dmgpair"});
+    }
+    groups.push({id:"dmgpair",options:opts});
+  }
+  // クリダメ(クリ率はcrLvで確定済み)
+  {
+    const crEff=Math.min(100,base.cr+CR_CUM(crLv))/100;
+    const c0=1+crEff*(base.cd/100);
+    const opts=[]; for(let l=0;l<=15;l++) opts.push({cost:cumCost(l),lg:Math.log((1+crEff*((base.cd+CD_CUM(l))/100))/c0),lv:l,id:"cd"});
+    groups.push({id:"cd",options:opts});
+  }
+  // 防御無視
+  {
+    const I=l=>{ const t=1-(1-base.ied/100)*(1-IED_CUM(l)/100); return Math.max(1e-6,1-(pdr/100)*(1-t)); };
+    const i0=I(0);
+    const opts=[]; for(let l=0;l<=15;l++) opts.push({cost:cumCost(l),lg:Math.log(I(l)/i0),lv:l,id:"ied"});
+    groups.push({id:"ied",options:opts});
+  }
+  return groups;
+}
+function solve(base,cls,mode,pdr,points){
+  const res={mode,warns:[],alloc:{stat:0,att:0,dmg:0,boss:0,norm:0,cr:0,cd:0,ied:0,exp:0}};
+  let budget=points;
+  // ① クリ率100%確保(最優先)
+  let crLv=0;
+  if(base.cr<100){
+    while(crLv<15 && base.cr+CR_CUM(crLv)<100) crLv++;
+    if(base.cr+CR_CUM(crLv)<100) res.warns.push(`クリ率がLv15でも${f1(base.cr+25)}%までしか届きません(素+25%<100%)。装備・リンク・アビリティでの補強が必要です。`);
+  }
+  const crCost=cumCost(crLv);
+  if(crCost>budget){ res.warns.push("ポイントがクリ率確保分にも足りません。"); crLv=0; while(cumCost(crLv+1)<=budget && crLv<15) crLv++; }
+  res.alloc.cr=crLv; budget-=cumCost(crLv);
+  // ② 狩り用: 経験値Lv15確定
+  if(mode==="hunt"){
+    let e=15;
+    if(cumCost(15)>budget){ e=0; while(e<15 && cumCost(e+1)<=budget) e++; res.warns.push("ポイント不足のため経験値獲得がLv15まで振れません。"); }
+    res.alloc.exp=e; budget-=cumCost(e);
+  }
+  // ③ 残りをDPで厳密最適化
+  const picked=optimizeDP(buildGroups(base,cls,mode,pdr,crLv),budget);
+  for(const o of picked){
+    if(o.id==="att") res.alloc.att=o.lv;
+    else if(o.id==="stat") res.alloc.stat=o.lv;
+    else if(o.id==="cd") res.alloc.cd=o.lv;
+    else if(o.id==="ied") res.alloc.ied=o.lv;
+    else if(o.id==="dmgpair"){ res.alloc.dmg=o.lv; if(mode==="boss") res.alloc.boss=o.lv2; else res.alloc.norm=o.lv2; }
+  }
+  const a=res.alloc;
+  res.used=cumCost(a.cr)+cumCost(a.exp)+cumCost(a.att)+cumCost(a.dmg)+cumCost(a.cd)+cumCost(a.ied)
+    +(cls==="xenon"? (l=>{const q=Math.floor(l/3),r=l%3;return 3*cumCost(q)+(r>0?r*COST[q+1]:0);})(a.stat) : cumCost(a.stat))
+    +cumCost(mode==="boss"?a.boss:a.norm);
+  res.left=points-res.used;
+  return res;
+}
+
+/* ===== 表示 ===== */
+function renderResult(el,title,res,base,cls,pdr,inp){
+  const mode=res.mode, a=res.alloc, c=inp.cur;
+  const sRec=score(base,cls,mode,pdr,a);
+  const sCur=score(base,cls,mode,pdr,c);
+  const sZero=score(base,cls,mode,pdr,{stat:0,att:0,dmg:0,boss:0,norm:0,cr:0,cd:0,ied:0});
+  const fdCur=(sRec/sCur-1)*100, fdZero=(sRec/sZero-1)*100;
+  const crRec=Math.min(100,base.cr+CR_CUM(a.cr)), crCur=Math.min(100,base.cr+CR_CUM(c.cr));
+  const rows=[
+    ["クリティカル発動確率","cr",v=>`+${f1(CR_CUM(v))}%`],
+    ...(mode==="hunt"?[["経験値獲得","exp",v=>`+${f1(EXP_CUM(v))}%`]]:[]),
+    [cls==="xenon"?"STR/DEX/LUK(合計)":cls==="da"?"HP(%)":"メインステータス","stat",v=>cls==="da"?`+${f1(2*v)}%`:`+${f1(30*v)}`],
+    ["攻撃力・魔力","att",v=>`+${f1(ATT_CUM(v))}`],
+    ["ダメージ","dmg",v=>`+${f1(DMG_CUM(v))}%`],
+    ...(mode==="boss"?[["ボスモンスターダメージ","boss",v=>`+${f1(BOSS_CUM(v))}%`]]:[["一般モンスターダメージ","norm",v=>`+${f1(NORM_CUM(v))}%`]]),
+    ["クリティカルダメージ","cd",v=>`+${f1(CD_CUM(v))}%`],
+    ["防御率無視","ied",v=>`+${f1(IED_CUM(v))}%`],
+  ];
+  let tbl=`<table class="alloc"><tr><th>ステータス</th><th>現在 → 推奨</th><th style="text-align:right">効果</th></tr>`;
+  for(const [name,key,eff] of rows){
+    const cur=c[key]??0, rec=a[key];
+    const cl=rec>cur?"up":rec<cur?"down":"keep";
+    const arrow=rec===cur? `Lv${rec}` : `Lv${cur} → <span class="${cl}">Lv${rec}</span>`;
+    tbl+=`<tr><td>${name}</td><td class="lv">${arrow}</td><td class="ef">${eff(rec)}</td></tr>`;
+  }
+  tbl+=`</table>`;
+  el.innerHTML=`
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="${mode==="boss"?"#f2c14e":"#59e3d8"}"/></svg>${title}(敵防御率${pdr}%)</div>
+    <div class="bigcard">
+      <div class="lab">今の振りからの火力上昇</div>
+      <div class="big">${fdCur>=0?"+":""}${f1(fdCur)}%</div>
+      <div class="delta">無振り比 +${f1(fdZero)}% ／ クリ率 ${f1(crCur)}% → ${f1(crRec)}%</div>
+    </div>
+    ${tbl}
+    <div class="ptline">使用 ${res.used.toLocaleString()}pt ／ 保有 ${ptsAt(inp.level).toLocaleString()}pt ／ 余り ${res.left.toLocaleString()}pt(HP%や耐性へ)</div>
+    ${res.warns.map(w=>`<div class="warnbox">⚠ ${w}</div>`).join("")}
+    ${crCur<100?`<div class="warnbox">⚠ 今の振りではクリ率${f1(crCur)}%で100%未満です。</div>`:""}
+  `;
+}
+
+function calc(){
+  const inp=readAll();
+  $("statNormal").style.display=inp.cls==="normal"?"grid":"none";
+  $("statXenon").style.display=inp.cls==="xenon"?"grid":"none";
+  $("statDA").style.display=inp.cls==="da"?"grid":"none";
+  $("hsStatLabel").innerHTML=inp.cls==="xenon"?'STR+DEX+LUK 合計Lv<span class="mx">/45</span>':inp.cls==="da"?'HP(%)<span class="mx">/15</span>':'メインステータス<span class="mx">/15</span>';
+  $("hs_stat").max=inp.cls==="xenon"?45:15;
+  const points=ptsAt(inp.level);
+  $("ptShow").textContent=`${points.toLocaleString()} pt`;
+  const {base,warns}=computeBase(inp);
+  const stLabel=inp.cls==="xenon"?"3ステ合計":inp.cls==="da"?"MaxHP":"メインステ";
+  $("baseShow").innerHTML=
+    `${stLabel} <b>${Math.round(base.stat).toLocaleString()}</b> ／ 攻/魔 <b>${f1(base.att)}</b> ／ ダメ <b>${f1(base.dmg)}%</b> ／ ボスダメ <b>${f1(base.boss)}%</b> ／ 一般ダメ <b>${f1(base.norm)}%</b><br>`+
+    `クリ率 <b>${f1(base.cr)}%</b> ／ クリダメ <b>${f1(base.cd)}%</b> ／ 防御無視 <b>${f1(base.ied)}%</b>`;
+  $("baseWarn").innerHTML=warns.map(w=>`<div class="warnbox">⚠ ${w}</div>`).join("");
+  if(inp.level<140){ $("resBoss").innerHTML=$("resHunt").innerHTML='<div class="hint">ハイパーステータスはLv140から使用できます。</div>'; return; }
+  const rB=solve(base,inp.cls,"boss",inp.pdrBoss,points);
+  const rH=solve(base,inp.cls,"hunt",inp.pdrHunt,points);
+  renderResult($("resBoss"),"⬢ ボス用",rB,base,inp.cls,inp.pdrBoss,inp);
+  renderResult($("resHunt"),"⬢ 狩り用",rH,base,inp.cls,inp.pdrHunt,inp);
+  window.__last={base,rB,rH,points};
+}
+document.querySelectorAll("input,select").forEach(el=>{
+  el.addEventListener("input",()=>{ clearTimeout(window._t); window._t=setTimeout(calc,120); });
+});
+calc();
+window.__calc=calc; window.__score=score; window.__cum=cumCost; window.__pts=ptsAt;
+</script>
+</body>
+</html>
