@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>リンクスキル 最適化計算機</title>
+<style>
+  :root{
+    --bg:#14101f; --panel:#1d1830; --panel2:#241d3a; --line:#332a4d;
+    --cyan:#59e3d8; --cyan-dim:rgba(89,227,216,.14);
+    --gold:#f2c14e; --gold-dim:rgba(242,193,78,.14);
+    --violet:#b28bf0;
+    --txt:#e8e4f5; --muted:#9a92b5; --warn:#ff8585;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;
+    --jp:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{color-scheme:dark}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(1000px 500px at 85% -10%, rgba(89,227,216,.06), transparent 60%),
+      radial-gradient(800px 420px at 0% 110%, rgba(140,90,220,.08), transparent 60%);
+    color:var(--txt); font-family:var(--jp); font-size:14px; line-height:1.6; padding:26px 18px 90px;
+  }
+  .wrap{max-width:1200px;margin:0 auto}
+  .backhome{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 14px;margin-bottom:16px}
+  .backhome:hover{color:var(--cyan);border-color:rgba(89,227,216,.45)}
+  header{margin-bottom:18px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .hexmark{width:50px;height:56px;flex:none}
+  h1{font-size:21px;font-weight:800;letter-spacing:.04em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px;max-width:780px}
+  .notice{background:var(--gold-dim);border:1px solid rgba(242,193,78,.35);border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:18px}
+  .notice b{color:var(--gold)}
+
+  .grid{display:grid;grid-template-columns:420px 1fr;gap:16px;align-items:start}
+  @media(max-width:1000px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;margin-bottom:14px}
+  .eyebrow{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.18em;color:var(--cyan);font-weight:700;margin-bottom:11px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .hexglyph{width:11px;height:12px;flex:none}
+  .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px}
+  .field input,.field select{width:100%;background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:7px 9px;font-size:13.5px;font-family:var(--mono)}
+  .field select{font-family:var(--jp)}
+  .field input:focus,.field select:focus{outline:2px solid var(--cyan);border-color:transparent}
+  .r2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+  .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:10px}
+  .seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:7px 0;font-size:12px;cursor:pointer;font-family:var(--jp)}
+  .seg button.on{background:var(--cyan-dim);color:var(--cyan);font-weight:700}
+
+  .lkrow{display:grid;grid-template-columns:20px 1fr 62px;gap:8px;align-items:center;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,.05)}
+  .lkrow:last-child{border-bottom:0}
+  .lkrow input[type=checkbox]{accent-color:var(--cyan);width:14px;height:14px}
+  .lkrow .nm{font-size:12.5px;line-height:1.35}
+  .lkrow .nm .jb{color:var(--muted);font-size:10.5px}
+  .lkrow select{background:#120e1d;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:3px 4px;font-size:12px;width:100%;font-family:var(--mono);text-align:center}
+  .lkgroup{font-size:10.5px;letter-spacing:.14em;color:var(--violet);margin:10px 0 2px;font-weight:700}
+
+  .bigcard{background:linear-gradient(180deg,var(--gold-dim),transparent);border:1px solid rgba(242,193,78,.4);border-radius:12px;padding:12px 16px;margin-bottom:12px}
+  .bigcard .lab{font-size:11px;color:var(--muted)}
+  .bigcard .big{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--gold);line-height:1.25}
+  .bigcard .delta{font-family:var(--mono);font-size:11.5px;color:var(--cyan);margin-top:2px}
+  table.rank{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.rank th{font-size:10.5px;color:var(--muted);text-align:left;padding:3px 6px;border-bottom:1px solid var(--line);font-weight:600}
+  table.rank td{padding:4px 6px;border-bottom:1px dashed rgba(255,255,255,.06)}
+  table.rank td.num{font-family:var(--mono);white-space:nowrap;text-align:right}
+  table.rank tr.in12 td:first-child{color:var(--gold);font-weight:700}
+  table.rank tr.out td{opacity:.55}
+  table.rank .eq{font-size:10px;color:var(--cyan);margin-left:4px}
+  .warnbox{background:rgba(255,133,133,.08);border:1px solid rgba(255,133,133,.3);border-radius:8px;padding:7px 11px;font-size:11.5px;color:var(--warn);margin-top:9px}
+  details{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-top:14px}
+  summary{cursor:pointer;padding:11px 15px;font-weight:700;font-size:12.5px;list-style:none;display:flex;gap:8px;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"＋";margin-left:auto;color:var(--muted)}
+  details[open] summary::after{content:"−"}
+  details .inner{padding:0 15px 13px;font-size:11.5px;color:var(--muted);line-height:1.7}
+  details .inner b{color:var(--gold)}
+  .footnote{margin-top:22px;font-size:11px;color:var(--muted);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="backhome" href="../">⬢ VIP de Maple — ツール一覧へ</a>
+
+<header>
+  <svg class="hexmark" viewBox="0 0 52 58" aria-hidden="true">
+    <polygon points="26,2 50,15 50,43 26,56 2,43 2,15" fill="none" stroke="#59e3d8" stroke-width="2.5"/>
+    <polygon points="26,14 40,22 40,36 26,44 12,36 12,22" fill="rgba(178,139,240,.12)" stroke="#b28bf0" stroke-width="1.5"/>
+  </svg>
+  <div>
+    <h1>リンクスキル 最適化計算機</h1>
+    <div class="sub">所持リンクのLvを入れると、ボス火力への交換効率順に全リンクをランキングし、装着すべき12個・今の装着との火力差・Lv3(輝かしい勇者の証)をどのリンクに使うべきかの優先度を計算します。KMS準拠+JMS特有(ハヤト・カンナ)対応。</div>
+  </div>
+</header>
+
+<div class="notice">
+  <b>使い方:</b> ①はステータス画面の表示値のまま(リンク込みでOK)。②で「今装着している12個」にチェック+所持Lvを入力すると、表示値に乗っている分(DSボスダメ・ファントムクリ率等)を逆算して素の値を出します。<b>自分の職業のリンクはチェック不要</b>(12枠外で常時適用のため、表示値に溶けたままで正しく扱われます)。
+</div>
+
+<div class="grid">
+
+<div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>① キャラクター(表示値のまま)</div>
+    <div class="r2">
+      <div class="field"><label>職業タイプ</label>
+        <select id="cls">
+          <option value="normal">通常(メイン+サブ)</option>
+          <option value="xenon">キセノン(STR+DEX+LUK)</option>
+          <option value="da">デーモンアベンジャー(MaxHP)</option>
+        </select></div>
+      <div class="field"><label>パーティ人数(アデル用・自分含む)</label><input id="party" type="number" min="1" max="6" value="1"></div>
+    </div>
+    <div id="statNormal" class="r2">
+      <div class="field"><label>メインステータス(表示値)</label><input id="mainStat" type="number" value="120000" min="1"></div>
+      <div class="field"><label>サブステータス(表示値)</label><input id="subStat" type="number" value="6000" min="0"></div>
+    </div>
+    <div id="statXenon" class="r2" style="display:none">
+      <div class="field"><label>STR+DEX+LUKの合計(表示値)</label><input id="xenonSum" type="number" value="150000" min="1"></div>
+      <div></div>
+    </div>
+    <div id="statDA" class="r2" style="display:none">
+      <div class="field"><label>MaxHP(表示値)</label><input id="daHP" type="number" value="1500000" min="1"></div>
+      <div></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>ステータス%の合計</label><input id="statPct" type="number" value="60" min="0"></div>
+      <div class="field"><label>攻撃力/魔力%の合計</label><input id="attPct" type="number" value="100" min="0"></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>攻撃力/魔力(表示値)</label><input id="att" type="number" value="4000" min="1"></div>
+      <div class="field"><label>ダメージ(%)</label><input id="dmg" type="number" value="120" min="0"></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>ボスダメージ(%)</label><input id="boss" type="number" value="380" min="0"></div>
+      <div class="field"><label>クリティカルダメージ(%・表示値)</label><input id="cd" type="number" value="90" min="0"></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>クリティカル率(%)</label><input id="cr" type="number" value="100" min="0" max="200"></div>
+      <div class="field"><label>防御率無視(%・合計)</label><input id="ied" type="number" value="94" min="0" max="100" step="0.1"></div>
+    </div>
+    <div class="r2">
+      <div class="field"><label>敵の防御率(%)</label><input id="pdr" type="number" value="300" min="0"></div>
+      <div></div>
+    </div>
+    <div class="hint">ステータス%はユニオン・潜在・アビリティ等の合計(ゼノンリンクと海賊リンクの評価に使用。だいたいでOK)。終盤ボスの防御率は300%。</div>
+    <div class="seg" style="margin-top:10px">
+      <button id="mSus" class="on">期待値評価(稼働率込み)</button>
+      <button id="mBurst">バースト評価(常時発動)</button>
+    </div>
+    <div class="hint">条件付きリンク(AB・カンナ・カイン・盗賊)の評価方法。極ダメ用途ならバースト評価に。</div>
+  </div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#b28bf0"/></svg>② 所持リンクと現在の装着(✓=装着中)</div>
+    <div id="linkList"></div>
+    <div class="hint">Lv0=未所持。グループ共有リンク(冒険家・シグナス・レジスタンス)は<b>メンバーキャラのLv合計</b>を入力(例: 120の盗賊2体=Lv4)。上限は3×職数。</div>
+  </div>
+</div>
+
+<div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>結果</div>
+    <div class="bigcard">
+      <div class="lab">推奨12個に組み替えた場合の火力上昇(今の装着比)</div>
+      <div class="big" id="fdMain">—</div>
+      <div class="delta" id="fdSub"></div>
+    </div>
+    <div id="warnBox"></div>
+  </div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#f2c14e"/></svg>火力交換効率ランキング(採用順の増分)</div>
+    <div id="rankTable"></div>
+  </div>
+  <div class="card">
+    <div class="eyebrow"><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#59e3d8"/></svg>Lv3優先度(輝かしい勇者の証を使う順番)</div>
+    <div id="lv3Table"></div>
+    <div class="hint">各リンクを現在Lv→Lv3(グループはキャラ1体分=+3Lv)にしたときの火力増分。285到達キャラ1体につき証1個なので、上から順に使うのが最適です。</div>
+  </div>
+</div>
+
+</div>
+
+<details>
+  <summary><svg class="hexglyph" viewBox="0 0 11 12"><polygon points="5.5,0 11,3 11,9 5.5,12 0,9 0,3" fill="#9a92b5"/></svg>仕様・データ根拠・前提</summary>
+  <div class="inner">
+    <p><b>システム:</b> 他キャラから受け取れるリンクは最大12個(自分の職のリンクは枠外で常時適用)。Lv1=キャラLv70、Lv2=Lv120、Lv3=Lv285+「輝かしい勇者の証」(CROWNで新設。1キャラ1個、アウルNPCで抽出は2回目以降20億メソ)。冒険家系はグループ3職でLv合計最大9、シグナス5職で最大15、レジスタンス4職で最大12(メンバーのLv合計=共有Lv)。変更は無料・回数無制限・プリセット3枠。</p>
+    <p><b>リンク先に伝わらない効果に注意:</b> 冒険家戦士/弓とレジスタンスの隠しダメージ%は本人のみ(リンク先は戦士=HP回復、弓=クリ率のみ)。シグナスの攻魔はLv11以降本人とリンク先で分岐(受取側はLv15で+35)。海賊の全ステもLv7以降分岐(受取側Lv9で+100)。カイザーはリンク先にはHP%のみ(火力0)。本ツールは全て「受け取る側」の値で計算。</p>
+    <p><b>実効値の前提(期待値評価時):</b> AB=10秒/CT60秒(稼働17%・KMSではバースト用の定番評価)。カイン=20秒/40秒(稼働50%・コミュニティ通説)。カンナ=攻撃40回→12秒(稼働50%と仮定・定量的通説は未確認)。盗賊=状態異常付与で10秒/CT20秒(稼働50%)。カデナ=状態異常中の敵が条件でボスにもデバフで成立(常時扱い)。ホヨンのHP100%ダメはボスでは初撃のみのため無視(防御無視のみ評価)。アデルはソロでも+1人分加算(Lv3ソロ実効9%)。冒険家魔法使いは3スタック常時前提。イリウムは4重複×2/3/4%(6重複×1/2%説あり・要検証)。</p>
+    <p><b>計算モデル(HEXA/ハイパーステ計算機と同一):</b> 火力 ∝ 攻撃力 × ステータス項 × (1+(ダメ+ボスダメ)/100) × (1+min(100,クリ率)×クリダメ) × (1−敵防御率×(1−防御無視))。防御無視は各リンクを1ソースとして乗算合成。クリ率は100%超過分を無価値として評価(クリ率リンクを外すとハイパーステ側で補填できる場合は、実際の価値はここの表示より下がります)。</p>
+    <p><b>選抜:</b> 貪欲法で採用順を決定後、1対1交換の局所探索で最適性を確認。経験値系(メルセデス・アラン・エヴァン)・生存系(隠月・ミハイル・レジスタンス・レン・カイザー)・一般モンスター限定(ララ)はボス火力0として圏外(対象外)に表示。</p>
+    <p><b>出典:</b> namu.wiki「링크 스킬」本文直接取得(2026-07-22版)・JMS公式ゲームガイド・各職業スキルページ・inven。KMS未実装差分なし(レテのみKMS先行・JMS未実装のため除外)。</p>
+  </div>
+</details>
+
+<div class="footnote">
+  非公式ファンツール。数値は2026年8月時点(CROWN後)。イリウムの重複数など要検証項目は本文注記参照。ⓒ NEXON
+</div>
+
+</div>
+
+<script>
+"use strict";
+/* ===== リンクデータ(受け取る側の値) =====
+   eff配列は Lv1..max。up=稼働率(期待値評価時のみ適用)。disp=ステータス画面に乗る(逆算対象)。 */
+const LINKS=[
+ // 火力系(単独)
+ {id:"ds",   grp:"レジスタンス", job:"デーモンスレイヤー", name:"デーモンフューリー",   max:3, boss:[10,15,20], disp:["boss"]},
+ {id:"da",   grp:"レジスタンス", job:"デーモンアベンジャー", name:"ワイルドレイジ",     max:3, dmg:[5,10,15], disp:["dmg"]},
+ {id:"xenon",grp:"レジスタンス", job:"ゼノン", name:"ハイブリッドロジック",             max:3, statP:[5,10,15], disp:["statP"]},
+ {id:"phan", grp:"英雄", job:"ファントム", name:"デッドリーインスティンクト",           max:3, cr:[10,15,20], disp:["cr"]},
+ {id:"lumi", grp:"英雄", job:"ルミナス", name:"パーミエイト",                           max:3, ied:[10,15,20], disp:["ied"]},
+ {id:"ab",   grp:"ノヴァ", job:"エンジェリックバスター", name:"ソウルコントラクト",     max:3, dmg:[30,45,60], up:10/60, note:"10秒/CT60秒"},
+ {id:"kain", grp:"ノヴァ", job:"カイン", name:"プライアープレパレーション",             max:3, dmg:[9,17,25], up:0.5, note:"20秒/40秒"},
+ {id:"cade", grp:"ノヴァ", job:"カデナ", name:"インテンシブインサルト",                 max:3, dmg:[3,6,9], note:"状態異常中の敵(ボスもデバフで成立)"},
+ {id:"adele",grp:"レフ", job:"アデル", name:"ノーブレス",                               max:3, adele:true, disp:["boss"]},
+ {id:"illi", grp:"レフ", job:"イリウム", name:"戦闘の流れ",                             max:3, dmg:[8,12,16], note:"4重複×2/3/4%(6重複説あり)"},
+ {id:"ark",  grp:"レフ", job:"アーク", name:"無我",                                     max:3, dmg:[5,10,15], note:"5スタック常時前提"},
+ {id:"hoyo", grp:"アニマ", job:"ホヨン(虎影)", name:"自信満々",                         max:3, ied:[5,10,15], note:"HP100%ダメ部分はボスで無視"},
+ {id:"kanna",grp:"暁の陣", job:"カンナ", name:"紫扇伝授",                               max:3, dmg:[10,15,20], up:0.5, note:"攻撃40回→12秒"},
+ {id:"haya", grp:"暁の陣", job:"ハヤト", name:"蒼刃伝授",                               max:3, cd:[3,5,7], disp:["cd"], note:"クリ率100%+クリダメ50%条件"},
+ {id:"kine", grp:"その他", job:"キネシス", name:"判断",                                 max:3, cd:[2,4,6], disp:["cd"]},
+ {id:"rin",  grp:"その他", job:"リン", name:"守護神の加護",                             max:3, boss:[4,7,10], cr:[4,7,10], disp:["boss","cr"]},
+ {id:"zero", grp:"その他", job:"ゼロ", name:"ルィンヌの祝福",                           max:6, ied:[2,4,6,8,10,15], disp:["ied"], note:"Lvはストーリー進行(Ch8でLv6)"},
+ // グループ共有(Lv合計)
+ {id:"thief",grp:"冒険家", job:"盗賊系(3職)", name:"シーフカンニング",                   max:9, dmg:[3,6,9,12,15,18,21,24,27], up:0.5, note:"状態異常付与→10秒/CT20秒"},
+ {id:"mage", grp:"冒険家", job:"魔法使い系(3職)", name:"エンピリカルナレッジ",           max:9, dmg:[3,3,6,6,9,9,12,12,15], ied:[3,3,6,6,9,9,12,12,15], note:"3スタック常時前提"},
+ {id:"arch", grp:"冒険家", job:"弓系(3職)", name:"アドベンチャラーキュリアス",           max:9, cr:[3,4,6,7,9,10,12,13,15], disp:["cr"]},
+ {id:"pir",  grp:"冒険家", job:"海賊系(3職)", name:"パイレーツブレス",                   max:9, statF:[20,30,40,50,60,70,80,90,100], hpF:[350,525,700,875,1050,1225,1400,1575,1750], disp:["statF"]},
+ {id:"cyg",  grp:"シグナス", job:"騎士団5職", name:"シグナスブレス",                     max:15, attF:[7,9,11,13,15,17,19,21,23,25,27,29,31,33,35], disp:["attF"]},
+ // 対象外(ボス火力0)
+ {id:"merc", grp:"対象外", job:"メルセデス", name:"エルフの祝福",         max:3, util:"経験値+10/15/20%"},
+ {id:"aran", grp:"対象外", job:"アラン", name:"コンボキルアドバンテージ", max:3, util:"コンボ玉EXP+400/650/900%"},
+ {id:"evan", grp:"対象外", job:"エヴァン", name:"ルーンパーシスタンス",   max:3, util:"ルーン持続+30/50/70%"},
+ {id:"lara", grp:"対象外", job:"ララ", name:"大自然の友",                 max:3, util:"一般モンスター限定ダメ(ボス無効)"},
+ {id:"eun",  grp:"対象外", job:"隠月", name:"九死一生",                   max:3, util:"致死時5/10/15%で生存"},
+ {id:"kais", grp:"対象外", job:"カイザー", name:"アイアンウィル",         max:3, hpP:[5,10,15], util:"HP+5/10/15%(DAのみ火力)"},
+ {id:"ren",  grp:"対象外", job:"レン", name:"鋼体",                       max:3, util:"被ダメ-2/4/6%"},
+ {id:"mihi", grp:"対象外", job:"ミハイル", name:"光の守護",               max:3, util:"状態異常耐性100(10〜20秒)"},
+ {id:"res",  grp:"対象外", job:"レジスタンス4職", name:"スピリットオブフリーダム", max:12, util:"復活時無敵1〜12秒"},
+ {id:"warr", grp:"対象外", job:"戦士系(3職)", name:"インヴィンシブルビリーフ", max:9, util:"HP自動回復(リンク先にダメ%なし)"},
+];
+const ADELE_BASE=[2,4,6], ADELE_PER=[1,2,3];
+
+const $=id=>document.getElementById(id);
+const num=id=>{ const v=parseFloat($(id).value); return isFinite(v)?v:0; };
+const f1=x=>x.toLocaleString("ja-JP",{maximumFractionDigits:1});
+const f2=x=>x.toLocaleString("ja-JP",{maximumFractionDigits:2});
+
+/* ===== UI構築 ===== */
+{
+  const el=$("linkList");
+  let curGrp=null;
+  for(const L of LINKS){
+    if(L.grp!==curGrp){ curGrp=L.grp; const g=document.createElement("div"); g.className="lkgroup"; g.textContent=curGrp==="対象外"?"対象外(火力に関係しないリンク)":curGrp; el.appendChild(g); }
+    const row=document.createElement("div"); row.className="lkrow";
+    const opts=Array.from({length:L.max+1},(_,i)=>`<option value="${i}" ${i===(L.max<=3?2:Math.min(L.max, L.id==="zero"?6:4))&&false?"selected":""}>${i}</option>`).join("");
+    row.innerHTML=`<input type="checkbox" id="eq_${L.id}">
+      <span class="nm">${L.name}<br><span class="jb">${L.job}${L.note?" ― "+L.note:""}${L.util?" ― "+L.util:""}</span></span>
+      <select id="lv_${L.id}">${opts}</select>`;
+    el.appendChild(row);
+  }
+  // デフォルト所持Lv: 単独火力系はLv2、ゼロ6、グループは4(120×2体相当)、対象外は0
+  const defs={ds:2,da:2,xenon:2,phan:2,lumi:2,ab:2,kain:2,cade:2,adele:2,illi:2,ark:2,hoyo:2,kanna:2,haya:2,kine:2,rin:2,zero:6,thief:4,mage:4,arch:4,pir:4,cyg:6,merc:2,aran:2,evan:2};
+  for(const [k,v] of Object.entries(defs)) $("lv_"+k).value=Math.min(v, LINKS.find(x=>x.id===k).max);
+}
+
+/* ===== 入力読み取り+逆算 ===== */
+let evalMode="sus";
+function readAll(){
+  const cls=$("cls").value;
+  const inp={
+    cls, party:Math.min(6,Math.max(1,Math.round(num("party")))),
+    statPct:Math.max(0,num("statPct")), attPct:Math.max(0,num("attPct")),
+    att:Math.max(1,num("att")), dmg:num("dmg"), boss:num("boss"),
+    cd:num("cd"), cr:Math.max(0,num("cr")),
+    ied:Math.min(100,Math.max(0,num("ied"))), pdr:Math.max(0,num("pdr")),
+    mainStat:Math.max(1,num("mainStat")), subStat:Math.max(0,num("subStat")),
+    xenonSum:Math.max(1,num("xenonSum")), daHP:Math.max(1,num("daHP")),
+    links:{},
+  };
+  for(const L of LINKS){
+    inp.links[L.id]={ lv:Math.min(L.max,Math.max(0,Math.round(num("lv_"+L.id)))), eq:$("eq_"+L.id).checked };
+  }
+  return inp;
+}
+function effAt(L,lv,inp){ // 受取値(実効前・生値)
+  const e={dmg:0,boss:0,ied:0,cr:0,cd:0,attF:0,statF:0,statP:0,hpP:0,hpF:0};
+  if(lv<=0) return e;
+  const i=lv-1;
+  if(L.adele){ e.boss=ADELE_BASE[i]+Math.min(inp.party,4)*ADELE_PER[i]; return e; }
+  for(const k of ["dmg","boss","ied","cr","cd","attF","statF","statP","hpP","hpF"]) if(L[k]) e[k]=L[k][i];
+  return e;
+}
+function computeBase(inp){
+  const warns=[];
+  const attMul=1+inp.attPct/100;
+  // 装着中リンクのうち表示値に乗る分を合算
+  const sub={dmg:0,boss:0,cr:0,cd:0,attF:0,statF:0,statP:0,iedKeep:1};
+  for(const L of LINKS){
+    const s=inp.links[L.id];
+    if(!s.eq||s.lv<=0||!L.disp) continue;
+    const e=effAt(L,s.lv,inp);
+    for(const k of L.disp){
+      if(k==="ied") sub.iedKeep*=(1-e.ied/100);
+      else sub[k]+=e[k];
+    }
+  }
+  const base={
+    dmg: inp.dmg-sub.dmg, boss: inp.boss-sub.boss,
+    cr: inp.cr-sub.cr, cd: inp.cd-sub.cd,
+    ied: 100*(1-(1-inp.ied/100)/sub.iedKeep),
+    att: inp.att-sub.attF*attMul,
+    statPct: inp.statPct-sub.statP,
+    attMul,
+  };
+  // ステータスの純基礎値(表示値からリンクフラット分を除き、%を割り戻す)
+  if(inp.cls==="normal"){
+    base.mainPure=(inp.mainStat-sub.statF)/(1+inp.statPct/100);
+    base.subPure=(inp.subStat-sub.statF)/(1+inp.statPct/100);
+  } else if(inp.cls==="xenon"){
+    base.sumPure=(inp.xenonSum-3*sub.statF)/(1+inp.statPct/100);
+  } else {
+    let hpF=0,hpP=0;
+    for(const L of LINKS){ const s=inp.links[L.id]; if(!s.eq||s.lv<=0) continue; const e=effAt(L,s.lv,inp); hpF+=e.hpF; hpP+=e.hpP; }
+    base.hpPure=(inp.daHP-hpF)/(1+hpP/100);
+  }
+  ["dmg","boss","cd","cr","ied"].forEach(k=>{ if(base[k]<0){ base[k]=0; warns.push(`${k}の入力値より装着リンク分が大きくなっています。入力を確認してください。`); }});
+  if(base.att<=0){ base.att=1; warns.push("攻撃力の入力値より装着リンク分が大きくなっています。"); }
+  return {base,warns};
+}
+
+/* ===== 火力スコア ===== */
+function evalSet(set, base, inp, burst){ // set: [{L,lv}]
+  let dmg=base.dmg, boss=base.boss, cr=base.cr, cd=base.cd;
+  let attF=0, statF=0, statP=0, hpF=0, hpP=0, iedKeep=1;
+  for(const {L,lv} of set){
+    if(lv<=0) continue;
+    const e=effAt(L,lv,inp);
+    const up=(burst||!L.up)?1:L.up;
+    dmg+=e.dmg*up; boss+=e.boss; cr+=e.cr; cd+=e.cd;
+    attF+=e.attF; statF+=e.statF; statP+=e.statP; hpF+=e.hpF; hpP+=e.hpP;
+    if(e.ied) iedKeep*=(1-e.ied/100);
+  }
+  const att=base.att+attF*base.attMul;
+  let term;
+  const sp=(base.statPct+statP)/100;
+  if(inp.cls==="normal") term=4*(base.mainPure*(1+sp))+base.subPure*(1+sp)+5*statF;
+  else if(inp.cls==="xenon") term=base.sumPure*(1+sp)+3*statF;
+  else term=base.hpPure*(1+hpP/100)+hpF;
+  const D=1+(dmg+boss)/100;
+  const C=1+Math.min(100,cr)/100*(cd/100);
+  const iedT=1-(1-base.ied/100)*iedKeep;
+  const I=Math.max(1e-6,1-(inp.pdr/100)*(1-iedT));
+  return {v:att*Math.max(1,term)*D*C*I, cr};
+}
+
+/* ===== 選抜: 貪欲+1対1交換 ===== */
+function damageValueAt(L,inp){ // 候補か?
+  if(L.util&&inp.cls!=="da") return !!(L.hpP&&inp.cls==="da");
+  if(L.util&&inp.cls==="da") return !!L.hpP;
+  return true;
+}
+function optimize(base,inp,burst){
+  const owned=LINKS.filter(L=>inp.links[L.id].lv>0 && (!L.util || (inp.cls==="da"&&L.hpP)));
+  const cand=owned.map(L=>({L,lv:inp.links[L.id].lv}));
+  const picks=[]; const order=[];
+  let cur=[], curScore=evalSet([],base,inp,burst).v;
+  const base0=curScore;
+  while(picks.length<12){
+    let best=null,bestV=curScore;
+    for(const c of cand){
+      if(cur.includes(c)) continue;
+      const v=evalSet([...cur,c],base,inp,burst).v;
+      if(v>bestV+1e-9){ bestV=v; best=c; }
+    }
+    if(!best) break;
+    order.push({c:best, gain:(bestV/curScore-1)*100});
+    cur=[...cur,best]; picks.push(best); curScore=bestV;
+  }
+  // 1対1交換の局所探索
+  let improved=true;
+  while(improved){
+    improved=false;
+    for(const out of cand){
+      if(cur.includes(out)) continue;
+      for(const inn of [...cur]){
+        const test=cur.filter(x=>x!==inn).concat([out]);
+        const v=evalSet(test,base,inp,burst).v;
+        if(v>curScore+1e-9){ cur=test; curScore=v; improved=true; }
+      }
+    }
+  }
+  // 最終セットで採用順を貪欲に再導出(表示用)
+  const finalOrder=[]; let s=[], sc=base0;
+  const pool=[...cur];
+  while(pool.length){
+    let best=null,bestV=-1;
+    for(const c of pool){ const v=evalSet([...s,c],base,inp,burst).v; if(v>bestV){bestV=v;best=c;} }
+    finalOrder.push({c:best, gain:(bestV/sc-1)*100, cum:(bestV/base0-1)*100});
+    s.push(best); sc=bestV; pool.splice(pool.indexOf(best),1);
+  }
+  // 圏外(不採用)の参考増分
+  const outs=cand.filter(c=>!cur.includes(c)).map(c=>({c, gain:(evalSet([...cur,c],base,inp,burst).v/curScore-1)*100}))
+    .sort((a,b)=>b.gain-a.gain);
+  return {set:cur, score:curScore, base0, order:finalOrder, outs};
+}
+
+/* ===== 表示 ===== */
+function effText(L,lv,inp,burst){
+  if(lv<=0) return "—";
+  const e=effAt(L,lv,inp);
+  const up=(burst||!L.up)?1:L.up;
+  const p=[];
+  if(e.dmg) p.push(`ダメ+${f1(e.dmg*up)}%${up<1?`(${e.dmg}%×${Math.round(up*100)}%)`:""}`);
+  if(e.boss) p.push(`ボスダメ+${e.boss}%`);
+  if(e.ied) p.push(`防御無視+${e.ied}%`);
+  if(e.cr) p.push(`クリ率+${e.cr}%`);
+  if(e.cd) p.push(`クリダメ+${e.cd}%`);
+  if(e.attF) p.push(`攻魔+${e.attF}`);
+  if(e.statF) p.push(`全ステ+${e.statF}`);
+  if(e.statP) p.push(`全ステ+${e.statP}%`);
+  if(e.hpP&&inp.cls==="da") p.push(`HP+${e.hpP}%`);
+  return p.join(" ")||"—";
+}
+function calc(){
+  const inp=readAll();
+  $("statNormal").style.display=inp.cls==="normal"?"grid":"none";
+  $("statXenon").style.display=inp.cls==="xenon"?"grid":"none";
+  $("statDA").style.display=inp.cls==="da"?"grid":"none";
+  const burst=evalMode==="burst";
+  const {base,warns}=computeBase(inp);
+  const R=optimize(base,inp,burst);
+  // 現在の装着セット
+  const curSet=LINKS.filter(L=>inp.links[L.id].eq&&inp.links[L.id].lv>0).map(L=>({L,lv:inp.links[L.id].lv}));
+  const eqCount=LINKS.filter(L=>inp.links[L.id].eq).length;
+  const sCur=evalSet(curSet.filter(c=>!c.L.util||(inp.cls==="da"&&c.L.hpP)),base,inp,burst);
+  const sRec=evalSet(R.set,base,inp,burst);
+  const fd=(sRec.v/sCur.v-1)*100;
+  $("fdMain").textContent=(fd>=0?"+":"")+f2(fd)+"%";
+  $("fdSub").textContent=`リンク無し比 +${f1((sRec.v/R.base0-1)*100)}% ／ クリ率 ${f1(Math.min(100,sCur.cr))}% → ${f1(Math.min(100,sRec.cr))}%`;
+  const w=[...warns];
+  if(eqCount>12) w.push(`装着チェックが${eqCount}個あります(上限12個)。`);
+  if(sRec.cr<100) w.push(`推奨構成でもクリ率${f1(sRec.cr)}%で100%に届きません。ハイパーステ・アビリティ等での補強を。`);
+  if(sCur.cr<100&&sRec.cr>=100) w.push(`今の装着はクリ率${f1(sCur.cr)}%で100%未満です。`);
+  $("warnBox").innerHTML=w.map(x=>`<div class="warnbox">⚠ ${x}</div>`).join("");
+
+  // ランキング表
+  let html=`<table class="rank"><tr><th>#</th><th>リンク</th><th>Lv</th><th>実効効果</th><th style="text-align:right">増分火力</th><th style="text-align:right">累積</th></tr>`;
+  R.order.forEach((o,i)=>{
+    const id=o.c.L.id, eq=inp.links[id].eq;
+    html+=`<tr class="in12"><td>${i+1}</td><td>${o.c.L.name}<span class="jb" style="color:var(--muted);font-size:10.5px"> ${o.c.L.job}</span>${eq?'<span class="eq">装着中</span>':""}</td><td class="num">${o.c.lv}</td><td style="font-size:11px;color:var(--muted)">${effText(o.c.L,o.c.lv,inp,burst)}</td><td class="num">+${f2(o.gain)}%</td><td class="num">+${f1(o.cum)}%</td></tr>`;
+  });
+  R.outs.forEach(o=>{
+    const id=o.c.L.id, eq=inp.links[id].eq;
+    html+=`<tr class="out"><td>圏外</td><td>${o.c.L.name}<span style="color:var(--muted);font-size:10.5px"> ${o.c.L.job}</span>${eq?'<span class="eq">装着中</span>':""}</td><td class="num">${o.c.lv}</td><td style="font-size:11px;color:var(--muted)">${effText(o.c.L,o.c.lv,inp,burst)}</td><td class="num">+${f2(o.gain)}%</td><td class="num">—</td></tr>`;
+  });
+  LINKS.filter(L=>L.util&&!(inp.cls==="da"&&L.hpP)).forEach(L=>{
+    const s=inp.links[L.id];
+    html+=`<tr class="out"><td>対象外</td><td>${L.name}<span style="color:var(--muted);font-size:10.5px"> ${L.job}</span>${s.eq?'<span class="eq">装着中</span>':""}</td><td class="num">${s.lv}</td><td style="font-size:11px;color:var(--muted)">${L.util}</td><td class="num">—</td><td class="num">—</td></tr>`;
+  });
+  html+=`</table>`;
+  $("rankTable").innerHTML=html;
+
+  // Lv3優先度: 現在Lv→+分(単独はLv3へ、グループは+3Lv)を最適セット込みで再計算
+  const ups=[];
+  for(const L of LINKS){
+    if(L.util&&!(inp.cls==="da"&&L.hpP)) continue;
+    if(L.id==="zero") continue; // ゼロはストーリー進行のため証対象外
+    const lv=inp.links[L.id].lv;
+    const target=L.max<=3?3:Math.min(L.max,lv+3);
+    if(lv>=target) continue;
+    const links2=JSON.parse(JSON.stringify(inp.links)); links2[L.id].lv=target;
+    const inp2={...inp,links:links2};
+    const R2=optimize(base,inp2,burst);
+    const gain=(R2.score/sRec.v-1)*100;
+    ups.push({L,lv,target,gain});
+  }
+  ups.sort((a,b)=>b.gain-a.gain);
+  let h2=`<table class="rank"><tr><th>#</th><th>リンク</th><th>現在→対象</th><th style="text-align:right">火力増分</th></tr>`;
+  ups.slice(0,14).forEach((u,i)=>{
+    h2+=`<tr${i<3?' class="in12"':''}><td>${i+1}</td><td>${u.L.name}<span style="color:var(--muted);font-size:10.5px"> ${u.L.job}</span></td><td class="num">Lv${u.lv}→${u.target}</td><td class="num">+${f2(u.gain)}%</td></tr>`;
+  });
+  h2+=`</table>`;
+  $("lv3Table").innerHTML=h2;
+  window.__last={base,R,sCur:sCur.v,sRec:sRec.v,ups};
+}
+$("mSus").addEventListener("click",()=>{evalMode="sus";$("mSus").classList.add("on");$("mBurst").classList.remove("on");calc();});
+$("mBurst").addEventListener("click",()=>{evalMode="burst";$("mBurst").classList.add("on");$("mSus").classList.remove("on");calc();});
+document.querySelectorAll("input,select").forEach(el=>{
+  el.addEventListener("input",()=>{ clearTimeout(window._t); window._t=setTimeout(calc,150); });
+});
+calc();
+window.__calc=calc; window.__eval=evalSet; window.__read=readAll; window.__computeBase=computeBase;
+</script>
+</body>
+</html>
