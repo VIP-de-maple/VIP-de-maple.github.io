@@ -190,7 +190,7 @@
     <p><b>実効値の前提(期待値評価時):</b> AB=10秒/CT60秒(稼働17%・KMSではバースト用の定番評価)。カイン=20秒/40秒(稼働50%・コミュニティ通説)。カンナ=攻撃40回→12秒(稼働50%と仮定・定量的通説は未確認)。盗賊=状態異常付与で10秒/CT20秒(稼働50%)。カデナ=状態異常中の敵が条件でボスにもデバフで成立(常時扱い)。ホヨンのHP100%ダメはボスでは初撃のみのため無視(防御無視のみ評価)。アデルはソロでも+1人分加算(Lv3ソロ実効9%)。冒険家魔法使いは3スタック常時前提。イリウムは4重複×2/3/4%(6重複×1/2%説あり・要検証)。</p>
     <p><b>計算モデル(HEXA/ハイパーステ計算機と同一):</b> 火力 ∝ 攻撃力 × ステータス項 × (1+(ダメ+ボスダメ)/100) × (1+min(100,クリ率)×クリダメ) × (1−敵防御率×(1−防御無視))。防御無視は各リンクを1ソースとして乗算合成。クリ率は100%超過分を無価値として評価(クリ率リンクを外すとハイパーステ側で補填できる場合は、実際の価値はここの表示より下がります)。</p>
     <p><b>選抜:</b> 貪欲法で採用順を決定後、1対1交換の局所探索で最適性を確認。経験値系(メルセデス・アラン・エヴァン)・生存系(隠月・ミハイル・レジスタンス・レン・カイザー)・一般モンスター限定(ララ)はボス火力0として圏外(対象外)に表示。</p>
-    <p><b>出典:</b> namu.wiki「링크 스킬」本文直接取得(2026-07-22版)・JMS公式ゲームガイド・各職業スキルページ・inven。KMS未実装差分なし(レテのみKMS先行・JMS未実装のため除外)。</p>
+    <p><b>出典:</b> JMS公式ゲームガイド「リンクスキル」(掲載順・スキル名・数値の第一ソース)+namu.wiki「링크 스킬」本文直接取得(2026-07-22版)・各職業スキルページ・inven。並び順はJMS公式ガイドの掲載順。JMS公式とKMS表記で差がある箇所はJMS公式を採用: リンのボスダメLv3=11%(KMS表記10%)、カーリーのダメLv3=7%(KMS表記10%)、ララはダメ3/5/7%が常時+一般モンスター時追加。レテのみKMS先行・JMS未実装のため除外。</p>
   </div>
 </details>
 
@@ -204,42 +204,50 @@
 "use strict";
 /* ===== リンクデータ(受け取る側の値) =====
    eff配列は Lv1..max。up=稼働率(期待値評価時のみ適用)。disp=ステータス画面に乗る(逆算対象)。 */
+/* 並び順はJMS公式ゲームガイド「リンクスキル」ページの掲載順 */
 const LINKS=[
- // 火力系(単独)
- {id:"ds",   grp:"レジスタンス", job:"デーモンスレイヤー", name:"デーモンフューリー",   max:3, boss:[10,15,20], disp:["boss"]},
- {id:"da",   grp:"レジスタンス", job:"デーモンアベンジャー", name:"ワイルドレイジ",     max:3, dmg:[5,10,15], disp:["dmg"]},
+ // 冒険者
+ {id:"warr", grp:"冒険者", job:"戦士系(3職)", name:"インヴィンシブルビリーフ", max:9, util:"HP自動回復(リンク先にダメ%なし)"},
+ {id:"mage", grp:"冒険者", job:"魔法使い系(3職)", name:"エンピリカルナレッジ",           max:9, dmg:[3,3,6,6,9,9,12,12,15], ied:[3,3,6,6,9,9,12,12,15], note:"3スタック常時前提"},
+ {id:"arch", grp:"冒険者", job:"弓使い系(3職)", name:"アドベンチャラーキュリアス",       max:9, cr:[3,4,6,7,9,10,12,13,15], disp:["cr"]},
+ {id:"thief",grp:"冒険者", job:"盗賊系(3職)", name:"シーフカンニング",                   max:9, dmg:[3,6,9,12,15,18,21,24,27], up:0.5, note:"状態異常付与→10秒/CT20秒"},
+ {id:"pir",  grp:"冒険者", job:"海賊系(3職)", name:"パイレーツブレス",                   max:9, statF:[20,30,40,50,60,70,80,90,100], hpF:[350,525,700,875,1050,1225,1400,1575,1750], disp:["statF"]},
+ // シグナス騎士団
+ {id:"cyg",  grp:"シグナス騎士団", job:"騎士団5職", name:"シグナスブレス",               max:15, attF:[7,9,11,13,15,17,19,21,23,25,27,29,31,33,35], disp:["attF"]},
+ {id:"mihi", grp:"シグナス騎士団", job:"ミハエル", name:"光の守護",       max:3, util:"状態異常耐性100(10〜20秒)"},
+ // レジスタンス
+ {id:"res",  grp:"レジスタンス", job:"レジスタンス4職", name:"スピリットオブフリーダム", max:12, util:"復活時無敵1〜12秒"},
  {id:"xenon",grp:"レジスタンス", job:"ゼノン", name:"ハイブリッドロジック",             max:3, statP:[5,10,15], disp:["statP"]},
- {id:"phan", grp:"英雄", job:"ファントム", name:"デッドリーインスティンクト",           max:3, cr:[10,15,20], disp:["cr"]},
+ {id:"ds",   grp:"レジスタンス", job:"デーモンスレイヤー", name:"デーモンフューリー",   max:3, boss:[10,15,20], disp:["boss"]},
+ {id:"da",   grp:"レジスタンス", job:"デーモンアヴェンジャー", name:"ワイルドレイジ",   max:3, dmg:[5,10,15], disp:["dmg"]},
+ // 英雄
+ {id:"aran", grp:"英雄", job:"アラン", name:"コンボキルアドバンテージ", max:3, util:"コンボ玉EXP+400/650/900%"},
+ {id:"evan", grp:"英雄", job:"エヴァン", name:"ルーンパーシスタンス",   max:3, util:"ルーン持続+30/50/70%"},
  {id:"lumi", grp:"英雄", job:"ルミナス", name:"パーミエイト",                           max:3, ied:[10,15,20], disp:["ied"]},
- {id:"ab",   grp:"ノヴァ", job:"エンジェリックバスター", name:"ソウルコントラクト",     max:3, dmg:[30,45,60], up:10/60, note:"10秒/CT60秒"},
- {id:"kain", grp:"ノヴァ", job:"カイン", name:"プライアープレパレーション",             max:3, dmg:[9,17,25], up:0.5, note:"20秒/40秒"},
+ {id:"merc", grp:"英雄", job:"メルセデス", name:"エルフの祝福",         max:3, util:"経験値+10/15/20%"},
+ {id:"phan", grp:"英雄", job:"ファントム", name:"デッドリーインスティンクト",           max:3, cr:[10,15,20], disp:["cr"]},
+ {id:"eun",  grp:"英雄", job:"隠月", name:"九死一生",                   max:3, util:"致死時5/10/15%で生存"},
+ // 暁の陣
+ {id:"haya", grp:"暁の陣", job:"ハヤト", name:"蒼刃伝授",                               max:3, cd:[3,5,7], disp:["cd"], note:"クリ率100%+クリダメ50%条件"},
+ {id:"kanna",grp:"暁の陣", job:"カンナ", name:"紫扇伝授",                               max:3, dmg:[10,15,20], up:0.5, note:"攻撃40回→12秒"},
+ // ノヴァ
+ {id:"kais", grp:"ノヴァ", job:"カイザー", name:"アイアンウィル",         max:3, hpP:[5,10,15], util:"HP+5/10/15%(DAのみ火力)"},
  {id:"cade", grp:"ノヴァ", job:"カデナ", name:"インテンシブインサルト",                 max:3, dmg:[3,6,9], note:"状態異常中の敵(ボスもデバフで成立)"},
+ {id:"ab",   grp:"ノヴァ", job:"エンジェリックバスター", name:"ソウルコントラクト",     max:3, dmg:[30,45,60], up:10/60, note:"10秒/CT60秒"},
+ {id:"kain", grp:"ノヴァ", job:"カイン", name:"フライヤープレパレーション",             max:3, dmg:[9,17,25], up:0.5, note:"20秒/40秒"},
+ // レフ
  {id:"adele",grp:"レフ", job:"アデル", name:"ノーブレス",                               max:3, adele:true, disp:["boss"]},
  {id:"illi", grp:"レフ", job:"イリウム", name:"戦闘の流れ",                             max:3, dmg:[8,12,16], note:"4重複×2/3/4%(6重複説あり)"},
  {id:"ark",  grp:"レフ", job:"アーク", name:"無我",                                     max:3, dmg:[5,10,15], note:"5スタック常時前提"},
- {id:"hoyo", grp:"アニマ", job:"ホヨン(虎影)", name:"自信満々",                         max:3, ied:[5,10,15], note:"HP100%ダメ部分はボスで無視"},
- {id:"kanna",grp:"暁の陣", job:"カンナ", name:"紫扇伝授",                               max:3, dmg:[10,15,20], up:0.5, note:"攻撃40回→12秒"},
- {id:"haya", grp:"暁の陣", job:"ハヤト", name:"蒼刃伝授",                               max:3, cd:[3,5,7], disp:["cd"], note:"クリ率100%+クリダメ50%条件"},
- {id:"kine", grp:"その他", job:"キネシス", name:"判断",                                 max:3, cd:[2,4,6], disp:["cd"]},
- {id:"rin",  grp:"その他", job:"リン", name:"守護神の加護",                             max:3, boss:[4,7,10], cr:[4,7,10], disp:["boss","cr"]},
+ {id:"kali", grp:"レフ", job:"カーリー", name:"イネイトギフト",                         max:3, dmg:[3,5,7], disp:["dmg"], note:"ダメ%は常時(回復はCT30秒)"},
+ // アニマ
+ {id:"ren",  grp:"アニマ", job:"レン", name:"鋼体",                       max:3, util:"被ダメ-2/4/6%"},
+ {id:"hoyo", grp:"アニマ", job:"虎影(ホヨン)", name:"自信満々",                         max:3, ied:[5,10,15], note:"HP100%ダメ部分はボスで無視"},
+ {id:"lara", grp:"アニマ", job:"ララ", name:"大自然の友",                               max:3, dmg:[3,5,7], disp:["dmg"], note:"+一般モンスター時さらに+7/11/15%(ボス評価外)"},
+ // その他
  {id:"zero", grp:"その他", job:"ゼロ", name:"ルィンヌの祝福",                           max:6, ied:[2,4,6,8,10,15], disp:["ied"], note:"Lvはストーリー進行(Ch8でLv6)"},
- // グループ共有(Lv合計)
- {id:"thief",grp:"冒険家", job:"盗賊系(3職)", name:"シーフカンニング",                   max:9, dmg:[3,6,9,12,15,18,21,24,27], up:0.5, note:"状態異常付与→10秒/CT20秒"},
- {id:"mage", grp:"冒険家", job:"魔法使い系(3職)", name:"エンピリカルナレッジ",           max:9, dmg:[3,3,6,6,9,9,12,12,15], ied:[3,3,6,6,9,9,12,12,15], note:"3スタック常時前提"},
- {id:"arch", grp:"冒険家", job:"弓系(3職)", name:"アドベンチャラーキュリアス",           max:9, cr:[3,4,6,7,9,10,12,13,15], disp:["cr"]},
- {id:"pir",  grp:"冒険家", job:"海賊系(3職)", name:"パイレーツブレス",                   max:9, statF:[20,30,40,50,60,70,80,90,100], hpF:[350,525,700,875,1050,1225,1400,1575,1750], disp:["statF"]},
- {id:"cyg",  grp:"シグナス", job:"騎士団5職", name:"シグナスブレス",                     max:15, attF:[7,9,11,13,15,17,19,21,23,25,27,29,31,33,35], disp:["attF"]},
- // 対象外(ボス火力0)
- {id:"merc", grp:"対象外", job:"メルセデス", name:"エルフの祝福",         max:3, util:"経験値+10/15/20%"},
- {id:"aran", grp:"対象外", job:"アラン", name:"コンボキルアドバンテージ", max:3, util:"コンボ玉EXP+400/650/900%"},
- {id:"evan", grp:"対象外", job:"エヴァン", name:"ルーンパーシスタンス",   max:3, util:"ルーン持続+30/50/70%"},
- {id:"lara", grp:"対象外", job:"ララ", name:"大自然の友",                 max:3, util:"一般モンスター限定ダメ(ボス無効)"},
- {id:"eun",  grp:"対象外", job:"隠月", name:"九死一生",                   max:3, util:"致死時5/10/15%で生存"},
- {id:"kais", grp:"対象外", job:"カイザー", name:"アイアンウィル",         max:3, hpP:[5,10,15], util:"HP+5/10/15%(DAのみ火力)"},
- {id:"ren",  grp:"対象外", job:"レン", name:"鋼体",                       max:3, util:"被ダメ-2/4/6%"},
- {id:"mihi", grp:"対象外", job:"ミハイル", name:"光の守護",               max:3, util:"状態異常耐性100(10〜20秒)"},
- {id:"res",  grp:"対象外", job:"レジスタンス4職", name:"スピリットオブフリーダム", max:12, util:"復活時無敵1〜12秒"},
- {id:"warr", grp:"対象外", job:"戦士系(3職)", name:"インヴィンシブルビリーフ", max:9, util:"HP自動回復(リンク先にダメ%なし)"},
+ {id:"kine", grp:"その他", job:"キネシス", name:"判断",                                 max:3, cd:[2,4,6], disp:["cd"]},
+ {id:"rin",  grp:"その他", job:"リン", name:"守護神の加護",                             max:3, boss:[4,7,11], cr:[4,7,10], disp:["boss","cr"], note:"JMS公式値(KMS表記はボスダメ10%)"},
 ];
 const ADELE_BASE=[2,4,6], ADELE_PER=[1,2,3];
 
@@ -253,7 +261,7 @@ const f2=x=>x.toLocaleString("ja-JP",{maximumFractionDigits:2});
   const el=$("linkList");
   let curGrp=null;
   for(const L of LINKS){
-    if(L.grp!==curGrp){ curGrp=L.grp; const g=document.createElement("div"); g.className="lkgroup"; g.textContent=curGrp==="対象外"?"対象外(火力に関係しないリンク)":curGrp; el.appendChild(g); }
+    if(L.grp!==curGrp){ curGrp=L.grp; const g=document.createElement("div"); g.className="lkgroup"; g.textContent=curGrp; el.appendChild(g); }
     const row=document.createElement("div"); row.className="lkrow";
     const opts=Array.from({length:L.max+1},(_,i)=>`<option value="${i}" ${i===(L.max<=3?2:Math.min(L.max, L.id==="zero"?6:4))&&false?"selected":""}>${i}</option>`).join("");
     row.innerHTML=`<input type="checkbox" id="eq_${L.id}">
@@ -262,7 +270,7 @@ const f2=x=>x.toLocaleString("ja-JP",{maximumFractionDigits:2});
     el.appendChild(row);
   }
   // デフォルト所持Lv: 単独火力系はLv2、ゼロ6、グループは4(120×2体相当)、対象外は0
-  const defs={ds:2,da:2,xenon:2,phan:2,lumi:2,ab:2,kain:2,cade:2,adele:2,illi:2,ark:2,hoyo:2,kanna:2,haya:2,kine:2,rin:2,zero:6,thief:4,mage:4,arch:4,pir:4,cyg:6,merc:2,aran:2,evan:2};
+  const defs={ds:2,da:2,xenon:2,phan:2,lumi:2,ab:2,kain:2,cade:2,adele:2,illi:2,ark:2,kali:2,hoyo:2,lara:2,kanna:2,haya:2,kine:2,rin:2,zero:6,thief:4,mage:4,arch:4,pir:4,cyg:6,merc:2,aran:2,evan:2};
   for(const [k,v] of Object.entries(defs)) $("lv_"+k).value=Math.min(v, LINKS.find(x=>x.id===k).max);
 }
 
